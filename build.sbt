@@ -13,3 +13,6 @@ ideaExcludeFolders += ".idea_modules"
 resolvers += "Akka Repo" at "http://repo.akka.io/repository"
 
 libraryDependencies += "org.apache.spark" % "spark-core_2.9.3" % "0.8.0-incubating"
+
+libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0"
+

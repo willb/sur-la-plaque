@@ -9,6 +9,11 @@ class SLP(sc: SparkContext) {
     def main(files: Array[String]) {
         val datasets = files.map((file: String) => sc.parallelize(extract.trackpointDataFromFile(file)))
     }
+    
+    def processFiles(files: Array[String]) = {
+        val tupleSets = files.map((_, extract.trackpointDataFromFile(_)))
+        
+    }
 }
 
 object Main {

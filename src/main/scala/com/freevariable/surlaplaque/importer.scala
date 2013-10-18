@@ -1,16 +1,19 @@
 package com.freevariable.surlaplaque.importer;
 
+import com.freevariable.surlaplaque.data._
+
 import scala.xml.XML
 
 object extract {
-    def tupleFromTrackpoint(tp: scala.xml.Node) = ( timestamp(tp), latlong(tp), alt(tp), watts(tp) )
+    
+    def tupleFromTrackpoint(tp: scala.xml.Node) = Trackpoint(timestamp(tp), latlong(tp), alt(tp), watts(tp) )
 
     def timestamp(tp: scala.xml.Node) = (tp \ "Time").text
 
     def latlong(tp: scala.xml.Node) = {
         val lat = (tp \\ "LatitudeDegrees").text.toDouble
         val lon = (tp \\ "LongitudeDegrees").text.toDouble
-        (lat, lon)
+        new Coordinates(lat, lon)
     }
 
     def alt(tp: scala.xml.Node) = (tp \ "AltitudeMeters").text.toDouble
@@ -29,7 +32,7 @@ object extract {
 object TCX2CSV {
     def main(args: Array[String]) {
         for (file <- args.toList) 
-            for ((timestamp, (lat, long), alt, watts) <- extract.trackpointDataFromFile(file))
-                Console.println("%s,%f,%f,%f,%f".format(timestamp, lat, long, alt, watts))
+            for (tp @ Trackpoint(timestamp, Coordinates(lat, long), alt, watts) <- extract.trackpointDataFromFile(file))
+                Console.println("%s,%f,%f,%f,%f".format(tp.timestring, lat, long, alt, watts))
     }
 }
