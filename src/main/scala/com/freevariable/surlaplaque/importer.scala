@@ -29,11 +29,6 @@ object extract {
     }
 }
 
-object MMP {
-    case class MMPTrackpoint(tp: Trackpoint, period: Int, mmp: Double)
-    def calculate(data: Traversable[Trackpoint], period: Int) = {}
-}
-
 object TCX2CSV {
     def main(args: Array[String]) {
         for (file <- args.toList) 
