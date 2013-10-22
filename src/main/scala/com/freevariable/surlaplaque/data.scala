@@ -3,9 +3,13 @@ package com.freevariable.surlaplaque.data;
 import com.github.nscala_time.time.Imports._
 
 sealed case class Coordinates(lat: Double, lon: Double) {}
-    
+
 sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double) {
-    val timestring = timestamp.toDateTime.toString()
+    val timestring = Timestamp.stringify(timestamp)
+}
+
+object Timestamp {
+    def stringify(ts: Long) = ts.toDateTime.toString()
 }
 
 object Trackpoint {

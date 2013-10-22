@@ -27,5 +27,7 @@ object Main {
         
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
+        
+        
     }
 }
