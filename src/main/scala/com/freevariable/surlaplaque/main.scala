@@ -6,11 +6,7 @@ import org.apache.spark.SparkContext._
 import com.freevariable.surlaplaque.importer._
 
 class SLP(sc: SparkContext) {
-    def main(files: Array[String]) {
-        val datasets = files.map((file: String) => sc.parallelize(extract.trackpointDataFromFile(file)))
-    }
-    
-    def processFiles(files: Array[String]) = {
+    def processFiles(files: Array[String], mmpPeriod: Int = 60) = {
         val tupleSets = files.map((_, extract.trackpointDataFromFile(_)))
         
     }
