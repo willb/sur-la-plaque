@@ -13,20 +13,23 @@ class SLP(sc: SparkContext) {
     }
 }
 
-object BucketApp {
+trait Common {
+    def master = sys.env.get("SLP_MASTER") match {
+        case Some(v) => v
+        case None => "local[2]"
+    }
+    
+    def appName = "sur-la-plaque"
+    
+    def ftp = sys.env.get("SLP_FTP") match {
+        case Some(v) => v.toInt
+        case None => 300
+    }
+}
+
+object BucketApp extends Common {
     
     def main(args: Array[String]) {
-        val appName = "sur-la-plaque"
-        val master = sys.env.get("SLP_MASTER") match {
-            case Some(v) => v
-            case None => "local[2]"
-        }
-        
-        val ftp = sys.env.get("SLP_FTP") match {
-            case Some(v) => v.toInt
-            case None => 300
-        }
-        
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         
@@ -44,3 +47,4 @@ object BucketApp {
         Console.println(buckets)
     }
 }
+

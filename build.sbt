@@ -14,5 +14,7 @@ resolvers += "Akka Repo" at "http://repo.akka.io/repository"
 
 libraryDependencies += "org.apache.spark" % "spark-core_2.9.3" % "0.8.0-incubating"
 
+libraryDependencies += "org.apache.spark" % "spark-mllib_2.9.3" % "0.8.0-incubating"
+
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0"
 
