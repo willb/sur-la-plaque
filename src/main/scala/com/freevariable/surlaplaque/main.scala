@@ -9,7 +9,15 @@ import com.freevariable.surlaplaque.importer._
 import com.freevariable.surlaplaque.data._
 import com.freevariable.surlaplaque.mmp._
 
-class SLP(sc: SparkContext) {
+object SLP {
+    import java.io.File
+    def listFilesInDir(dirname: String) = {
+        val dir = new java.io.File(dirname)
+        dir.listFiles.filter(_.isFile).toList.map(dirname + "/" + _.getName).filter(fn => fn.endsWith(".tcx")).toArray
+    }
+}
+
+class SLP(sc: SparkContext) {    
     def processFiles(files: Array[String]) = 
         sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))
 
