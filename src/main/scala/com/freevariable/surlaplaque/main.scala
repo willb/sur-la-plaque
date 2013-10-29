@@ -7,12 +7,14 @@ import org.apache.spark.mllib.clustering._
 
 import com.freevariable.surlaplaque.importer._
 import com.freevariable.surlaplaque.data._
+import com.freevariable.surlaplaque.mmp._
 
 class SLP(sc: SparkContext) {
-    def processFiles(files: Array[String], mmpPeriod: Int = 60) = {
-        val points = files.flatMap((s:String) => extract.trackpointDataFromFile(s))
-        sc.parallelize(points)
-    }
+    def processFiles(files: Array[String]) = 
+        sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))
+
+    def processFiles(files: Array[String], period: Int) = 
+        sc.parallelize(files.flatMap((s:String) => MMP.calculate(extract.trackpointDataFromFile(s).toList, period)))
 }
 
 trait Common {
@@ -76,5 +78,30 @@ object ClusterApp extends Common {
         val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
         
         labeledVectors.countByKey.foreach (kv => println("cluster %d has %d members".format(kv._1,kv._2)))
+    }
+}
+
+object MMPClusterApp extends Common {
+    
+    def main(args: Array[String]) {
+        // XXX: add optional parameters here to support cluster execution
+        val app = new SLP(new SparkContext(master, appName))
+        
+        val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
+        val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
+        val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "180").toInt
+                
+        val data = app.processFiles(args, mmpPeriod)
+
+        val vectors = data.map((mtp:MMPTrackpoint) => Array(mtp.mmp)).cache()
+        val km = new KMeans()
+        km.setK(numClusters)
+        km.setMaxIterations(numIterations)
+        
+        val model = km.run(vectors)
+        
+        val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
+        
+        labeledVectors.countByKey.foreach (kv => println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1)(0),kv._2)))
     }
 }
