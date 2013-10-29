@@ -11,9 +11,19 @@ import com.freevariable.surlaplaque.mmp._
 
 object SLP {
     import java.io.File
-    def listFilesInDir(dirname: String) = {
+    def listFilesInDir(dirname: String): List[String] = {
         val dir = new java.io.File(dirname)
-        dir.listFiles.filter(_.isFile).toList.map(dirname + "/" + _.getName).filter(fn => fn.endsWith(".tcx")).toArray
+        dir.listFiles.filter(_.isFile).toList.map(dirname + "/" + _.getName.toString).filter(fn => fn.endsWith(".tcx"))
+    }
+    
+    def expandArgs(args: Array[String]): Array[String] = {
+        val Pattern = "^-d(.*)$".r
+        args.toList.foldLeft(List():List[String])((ls, arg) =>
+            arg match {
+                case Pattern(dir) => ls ++ listFilesInDir(dir)
+                case arg:String => arg::ls
+            }
+        ).toArray
     }
 }
 
@@ -50,7 +60,7 @@ object BucketApp extends Common {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         
-        val data = app.processFiles(args)
+        val data = app.processFiles(SLP.expandArgs(args))
         
         val emptyBuckets = ZoneHistogram.make(ftp)
         
@@ -65,13 +75,13 @@ object BucketApp extends Common {
     }
 }
 
-object ClusterApp extends Common {
+object GPSClusterApp extends Common {
     
     def main(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         
-        val data = app.processFiles(args)
+        val data = app.processFiles(SLP.expandArgs(args))
         
         val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
         val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
@@ -99,7 +109,7 @@ object MMPClusterApp extends Common {
         val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
         val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "180").toInt
                 
-        val data = app.processFiles(args, mmpPeriod)
+        val data = app.processFiles(SLP.expandArgs(args), mmpPeriod)
 
         val vectors = data.map((mtp:MMPTrackpoint) => Array(mtp.mmp)).cache()
         val km = new KMeans()
