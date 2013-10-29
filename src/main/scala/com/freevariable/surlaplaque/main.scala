@@ -3,6 +3,8 @@ package com.freevariable.surlaplaque;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
+import org.apache.spark.mllib.clustering._
+
 import com.freevariable.surlaplaque.importer._
 import com.freevariable.surlaplaque.data._
 
@@ -24,6 +26,11 @@ trait Common {
     def ftp = sys.env.get("SLP_FTP") match {
         case Some(v) => v.toInt
         case None => 300
+    }
+    
+    def getEnvValue(variable:String, default:String) = sys.env.get(variable) match {
+        case Some(v) => v
+        case None => default
     }
 }
 
@@ -48,3 +55,26 @@ object BucketApp extends Common {
     }
 }
 
+object ClusterApp extends Common {
+    
+    def main(args: Array[String]) {
+        // XXX: add optional parameters here to support cluster execution
+        val app = new SLP(new SparkContext(master, appName))
+        
+        val data = app.processFiles(args)
+        
+        val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
+        val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
+        
+        val vectors = data.map((tp:Trackpoint) => Array(tp.latlong.lat, tp.latlong.lon)).cache()
+        val km = new KMeans()
+        km.setK(numClusters)
+        km.setMaxIterations(numIterations)
+        
+        val model = km.run(vectors)
+        
+        val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
+        
+        labeledVectors.countByKey.foreach (kv => println("cluster %d has %d members".format(kv._1,kv._2)))
+    }
+}
