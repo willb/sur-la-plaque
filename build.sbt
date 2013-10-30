@@ -18,3 +18,6 @@ libraryDependencies += "org.apache.spark" % "spark-mllib_2.9.3" % "0.8.0-incubat
 
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0"
 
+resolvers += "spray" at "http://repo.spray.io/"
+
+libraryDependencies += "io.spray" %%  "spray-json" % "1.2.5"

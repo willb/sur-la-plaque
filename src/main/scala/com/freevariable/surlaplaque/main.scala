@@ -76,6 +76,8 @@ object BucketApp extends Common {
 }
 
 object GPSClusterApp extends Common {
+    import spray.json._
+    import DefaultJsonProtocol._
     
     def main(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
@@ -95,7 +97,37 @@ object GPSClusterApp extends Common {
         
         val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
         
-        labeledVectors.countByKey.foreach (kv => println("cluster %d has %d members".format(kv._1,kv._2)))
+        val counts = labeledVectors.countByKey
+        
+        val maxCount = counts.map({case (_,v) => v}).max
+        
+        val points = counts.map({case (cluster,count) => makePointMap(cluster, count, model.clusterCenters(cluster), maxCount)})
+        
+        val struct = Map("type"->"FeatureCollection".toJson, "features"->points.toJson)
+        
+        println(struct.toJson)
+    }
+
+    def makePointMap(cluster:Int, count:Long, coords:Array[Double], max:Long) = {
+        val frac = count.toDouble / max
+        val color = rgb(frac)
+        val ssize = symsize(frac)
+        Map(
+        "type" -> "Feature".toJson,
+        "geometry" -> Map("type"->"Point".toJson, "coordinates"->Array(coords(1), coords(0)).toJson).toJson,
+        "properties" -> Map("marker-color"->color, "marker-size"->ssize, "marker-symbol"->"circle").toJson
+        )
+    }
+    
+    def symsize(frac:Double) = frac match {
+        case x if x < 0.33 => "small"
+        case x if x < 0.67 => "medium"
+        case _ => "large"
+    }
+    
+    def rgb(frac:Double) = {
+        val gb = ((1-frac) * 256).toInt
+        "#ff%02x%02x".format(gb,gb)
     }
 }
 
