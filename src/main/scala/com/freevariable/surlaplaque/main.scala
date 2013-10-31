@@ -115,7 +115,7 @@ object GPSClusterApp extends Common {
         Map(
         "type" -> "Feature".toJson,
         "geometry" -> Map("type"->"Point".toJson, "coordinates"->Array(coords(1), coords(0)).toJson).toJson,
-        "properties" -> Map("marker-color"->color, "marker-size"->ssize, "marker-symbol"->"circle").toJson
+        "properties" -> Map("marker-color"->color/*, "marker-size"->ssize, "marker-symbol"->"circle"*/).toJson
         )
     }
     
