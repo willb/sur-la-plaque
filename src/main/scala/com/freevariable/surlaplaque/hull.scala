@@ -15,9 +15,9 @@ object QuickHull {
 
   // twice the area of a triangle defined by three points
   def triDet(a:Coordinates, b:Coordinates, c:Coordinates) = {
-    val Coordinates(ay,ax) = a
-    val Coordinates(by,bx) = b
-    val Coordinates(cy,cx) = c
+    val Coordinates(ax,ay) = a
+    val Coordinates(bx,by) = b
+    val Coordinates(cx,cy) = c
     (ax*by) - (ay*bx) + (ay*cx) - (ax*cy) + (bx*cy) - (cx*by)
   }
   
