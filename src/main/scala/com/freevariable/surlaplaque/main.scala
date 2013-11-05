@@ -38,7 +38,7 @@ class SLP(sc: SparkContext) {
 trait Common {
     def master = sys.env.get("SLP_MASTER") match {
         case Some(v) => v
-        case None => "local[2]"
+        case None => "local[8]"
     }
     
     def appName = "sur-la-plaque"
