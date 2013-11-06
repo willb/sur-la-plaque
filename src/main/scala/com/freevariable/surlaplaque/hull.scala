@@ -1,4 +1,3 @@
-
 package com.freevariable.surlaplaque.quickhull;
 
 import com.freevariable.surlaplaque.data._
@@ -42,5 +41,24 @@ object QuickHull {
           def apply(p: Coordinates) = p
           def isDefinedAt(p: Coordinates) = !inPoly(p, poly)
       }
+  }
+  
+  def makeDistanceFinder(line_start:Coordinates, line_end:Coordinates) = {
+      val latDelta = line_end.lat - line_start.lat
+      val lonDelta = line_end.lon - line_start.lon
+      val Coordinates(lat1,lon1) = line_start
+      val Coordinates(lat2,lon2) = line_end
+      
+      val denom = (latDelta*latDelta) + (lonDelta*lonDelta)
+      
+      ((pt:Coordinates) => {
+          val Coordinates(pt_lat,pt_lon) = pt
+          val cp = (pt_lon - lon1) * lonDelta + (pt_lat - lat1) * latDelta match {
+              case u if u < 0 => line_start
+              case u if u > 1 => line_end
+              case u => Coordinates(lat1 + u * latDelta, lon1 + u * lonDelta)
+          }
+          pt.distance(cp)
+      })
   }
 }
