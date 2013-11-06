@@ -2,7 +2,9 @@ package com.freevariable.surlaplaque.data;
 
 import com.github.nscala_time.time.Imports._
 
-sealed case class Coordinates(lat: Double, lon: Double) {}
+sealed case class Coordinates(lat: Double, lon: Double) {
+    def distance(other:Coordinates) = Math.sqrt(Math.pow(other.lat - lat, 2) + Math.pow(other.lon - lon, 2))
+}
 
 sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double) {
     val timestring = Timestamp.stringify(timestamp)
