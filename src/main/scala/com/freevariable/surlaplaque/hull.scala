@@ -27,10 +27,20 @@ object QuickHull {
   case class Upon extends Position {}
   
   def relativePosition(point:Coordinates, line_start:Coordinates, line_end:Coordinates) = {
-      triDet(line_start, line_end, point) match {
+      triDet(point, line_start, line_end) match {
           case 0 => Upon()
           case x if x > 0 => Above()
           case x if x < 0 => Below()
+      }
+  }
+  
+  // XXX
+  def inPoly(point:Coordinates, poly:List[Coordinates]) = false
+  
+  def makeEnclosedFilter(poly:List[Coordinates]) = {
+      new PartialFunction[Coordinates, Coordinates] {
+          def apply(p: Coordinates) = p
+          def isDefinedAt(p: Coordinates) = !inPoly(p, poly)
       }
   }
 }
