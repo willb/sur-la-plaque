@@ -36,6 +36,8 @@ class SLP(sc: SparkContext) {
 }
 
 trait Common {
+    import java.io._
+    
     def master = sys.env.get("SLP_MASTER") match {
         case Some(v) => v
         case None => "local[8]"
@@ -46,6 +48,12 @@ trait Common {
     def ftp = sys.env.get("SLP_FTP") match {
         case Some(v) => v.toInt
         case None => 300
+    }
+    
+    def outputFile = sys.env.get("SLP_OUTPUT_FILE") match {
+        case Some("--") => new PrintWriter(System.err)
+        case Some(filename) => new PrintWriter(new File(filename))
+        case None => new PrintWriter(new File("slp.json"))
     }
     
     def getEnvValue(variable:String, default:String) = sys.env.get(variable) match {
@@ -105,7 +113,9 @@ object GPSClusterApp extends Common {
         
         val struct = Map("type"->"FeatureCollection".toJson, "features"->points.toJson)
         
-        println(struct.toJson)
+        val out = outputFile
+        out.println(struct.toJson)
+        out.close
     }
 
     def makePointMap(cluster:Int, count:Long, coords:Array[Double], max:Long) = {
@@ -152,6 +162,10 @@ object MMPClusterApp extends Common {
         
         val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
         
-        labeledVectors.countByKey.foreach (kv => println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1)(0),kv._2)))
+        val out = outputFile
+        
+        labeledVectors.countByKey.foreach (kv => out.println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1)(0),kv._2)))
+        
+        out.close
     }
 }
