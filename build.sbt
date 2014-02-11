@@ -21,3 +21,5 @@ libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0"
 resolvers += "spray" at "http://repo.spray.io/"
 
 libraryDependencies += "io.spray" %%  "spray-json" % "1.2.5"
+
+libraryDependencies += "org.json4s" %%  "json4s-jackson" % "3.2.6"
