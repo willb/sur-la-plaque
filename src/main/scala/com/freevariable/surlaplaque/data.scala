@@ -10,6 +10,10 @@ sealed case class Coordinates(lat: Double, lon: Double) {
 
 sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double) {
     val timestring = Timestamp.stringify(timestamp)
+    
+    def elevDelta(other: Trackpoint) = other.altitude - altitude
+    def timeDelta(other: Trackpoint) = (other.timestamp - timestamp).toDouble / 1000
+    def kphBetween(other:Trackpoint) = ((other.latlong.distance(latlong)) / timeDelta(other)) * 3600
 }
 
 object ZoneHistogram {
