@@ -1,16 +1,14 @@
 package com.freevariable.surlaplaque.util;
 
 /** 
-    FSD:  flat surface distance.
-    
-    Object to calculate the distance between two points.  Assumes 
+    Object to calculate the real-world distance between two points.  Assumes 
     that the Earth is flat[1] and that you aren't going across the 
     180º meridian or either pole.  In practice, I have few GPS traces
     from any of those locations.
 
     [1] ok, ok, that the Earth is an ellipsoid projected to a plane
 */
-object FSD {
+object RWDistance {
     import math.cos
     import math.sqrt
     import math.pow
