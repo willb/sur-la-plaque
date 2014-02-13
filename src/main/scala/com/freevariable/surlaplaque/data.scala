@@ -13,7 +13,13 @@ sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Do
     
     def elevDelta(other: Trackpoint) = other.altitude - altitude
     def timeDelta(other: Trackpoint) = (other.timestamp - timestamp).toDouble / 1000
+    def distanceDelta(other: Trackpoint) = (other.latlong.distance(latlong))
     def kphBetween(other:Trackpoint) = ((other.latlong.distance(latlong)) / timeDelta(other)) * 3600
+    def gradeBetween(other:Trackpoint) = {
+        val rise = elevDelta(other) // rise is in meters
+        val run = distanceDelta(other) * 10 // run is in km, but we want to get a percentage grade
+        rise/run
+    }
 }
 
 object ZoneHistogram {
