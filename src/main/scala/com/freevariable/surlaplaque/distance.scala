@@ -4,9 +4,11 @@ package com.freevariable.surlaplaque.util;
     FSD:  flat surface distance.
     
     Object to calculate the distance between two points.  Assumes 
-    that the Earth is flat and that you aren't going across the 
+    that the Earth is flat[1] and that you aren't going across the 
     180º meridian or either pole.  In practice, I have few GPS traces
     from any of those locations.
+
+    [1] ok, ok, that the Earth is an ellipsoid projected to a plane
 */
 object FSD {
     import math.cos
@@ -19,19 +21,6 @@ object FSD {
     
     /* calculates the distance between two points, given as lat/lon pairs in degrees */
     def distance(fst:(Double,Double),snd:(Double,Double)): Double = {
-        val (lat1,lon1) = fst
-        val (lat2,lon2) = snd
-        val pt1 = (toRadians(lat1), toRadians(lon1))
-        val pt2 = (toRadians(lat2), toRadians(lon2))
-        val latDelta = pt1._1 - pt2._1
-        val lonDelta = pt1._2 - pt2._2
-        val meanLat = toRadians((lat1 + lat2)) / 2
-        
-        return R * sqrt(pow(lonDelta, 2) + pow(cos(meanLat) * latDelta, 2))
-    }
-    
-    /* calculates the distance between two points, given as lat/lon pairs in degrees */
-    def sph_distance(fst:(Double,Double),snd:(Double,Double)): Double = {
         val (lat1,lon1) = fst
         val (lat2,lon2) = snd
 
