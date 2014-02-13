@@ -3,7 +3,9 @@ package com.freevariable.surlaplaque.data;
 import com.github.nscala_time.time.Imports._
 
 sealed case class Coordinates(lat: Double, lon: Double) {
-    def distance(other:Coordinates) = Math.sqrt(Math.pow(other.lat - lat, 2) + Math.pow(other.lon - lon, 2))
+    import com.freevariable.surlaplaque.util.RWDistance.{distance => rw_distance}
+    
+    def distance(other:Coordinates) = rw_distance((lat, lon), (other.lat, other.lon))
 }
 
 sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double) {
