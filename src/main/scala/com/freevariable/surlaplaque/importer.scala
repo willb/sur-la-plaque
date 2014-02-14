@@ -35,7 +35,7 @@ object extract {
 object TCX2CSV {
     def main(args: Array[String]) {
         for (file <- args.toList) 
-            for (tp @ Trackpoint(timestamp, Coordinates(lat, long), alt, watts) <- extract.trackpointDataFromFile(file))
+            for (tp @ Trackpoint(timestamp, Coordinates(lat, long), alt, watts, Some(file)) <- extract.trackpointDataFromFile(file))
                 Console.println("%s,%f,%f,%f,%f".format(tp.timestring, lat, long, alt, watts))
     }
 }
@@ -54,7 +54,7 @@ object TCX2Json {
        val processedArgs = expandArgs(args)
        
        val tuples = processedArgs.toList.flatMap((file => 
-          for (tp @ Trackpoint(timestamp, Coordinates(lat, lon), alt, watts) <- extract.trackpointDataFromFile(file))
+          for (tp @ Trackpoint(timestamp, Coordinates(lat, lon), alt, watts, Some(file)) <- extract.trackpointDataFromFile(file))
              yield ("timestamp" -> tp.timestring) ~ ("lat" -> lat) ~ ("lon" -> lon) ~ ("alt" -> alt) ~ ("watts" -> watts)
              )
              )

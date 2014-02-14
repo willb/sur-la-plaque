@@ -8,7 +8,7 @@ sealed case class Coordinates(lat: Double, lon: Double) {
     def distance(other:Coordinates) = rw_distance((lat, lon), (other.lat, other.lon))
 }
 
-sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double) {
+sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String]) {
     val timestring = Timestamp.stringify(timestamp)
     
     def elevDelta(other: Trackpoint) = other.altitude - altitude
@@ -47,6 +47,6 @@ object Timestamp {
 }
 
 object Trackpoint {
-    def apply(ts_string: String, latlong: Coordinates, altitude: Double, watts: Double) = 
-        new Trackpoint(ts_string.toDateTime.millis, latlong, altitude, watts)
+    def apply(ts_string: String, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String] = None) = 
+        new Trackpoint(ts_string.toDateTime.millis, latlong, altitude, watts, activity)
 }
