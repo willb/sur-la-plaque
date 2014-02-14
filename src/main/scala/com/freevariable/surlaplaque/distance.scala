@@ -18,9 +18,9 @@ object RWDistance {
     val R: Double = 6371.009
     
     /* calculates the distance between two points, given as lat/lon pairs in degrees */
-    def distance(fst:(Double,Double),snd:(Double,Double)): Double = {
-        val (lat1,lon1) = fst
-        val (lat2,lon2) = snd
+    def distance(pt1:(Double,Double),pt2:(Double,Double)): Double = {
+        val (lat1,lon1) = pt1
+        val (lat2,lon2) = pt2
 
         val latDelta = lat2 - lat1
         val lonDelta = lon2 - lon1
@@ -33,9 +33,9 @@ object RWDistance {
         sqrt(pow(K1 * latDelta, 2) + pow(K2 * lonDelta, 2))
     }
     
-    def haversine(fst:(Double,Double),snd:(Double,Double)): Double = {
-        val (lat1, lon1) = (toRadians(fst._1), toRadians(fst._2))
-        val (lat2, lon2) = (toRadians(snd._1), toRadians(snd._2))
+    def haversine(pt1:(Double,Double),pt2:(Double,Double)): Double = {
+        val (lat1, lon1) = (toRadians(pt1._1), toRadians(pt1._2))
+        val (lat2, lon2) = (toRadians(pt2._1), toRadians(pt2._2))
          
         val latDelta = lat2 - lat1
         val lonDelta = lon2 - lon1
@@ -46,9 +46,9 @@ object RWDistance {
         R * c
     }
     
-    def bearing(fst:(Double,Double),snd:(Double,Double)): Double = {
-        val (lat1, lon1) = (toRadians(fst._1), toRadians(fst._2))
-        val (lat2, lon2) = (toRadians(snd._1), toRadians(snd._2))
+    def bearing(pt1:(Double,Double),pt2:(Double,Double)): Double = {
+        val (lat1, lon1) = (toRadians(pt1._1), toRadians(pt1._2))
+        val (lat2, lon2) = (toRadians(pt2._1), toRadians(pt2._2))
         
         val latDelta = lat2 - lat1
         val lonDelta = lon2 - lon1
