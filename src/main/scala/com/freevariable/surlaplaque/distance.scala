@@ -9,10 +9,10 @@ package com.freevariable.surlaplaque.util;
     [1] ok, ok, that the Earth is an ellipsoid projected to a plane
 */
 object RWDistance {
-    import math.cos
+    import math.{cos, sin, asin, atan2}
     import math.sqrt
     import math.pow
-    import math.toRadians
+    import math.{toRadians, toDegrees}
     
     // earth's radius in km
     val R: Double = 6371.009
@@ -30,6 +30,33 @@ object RWDistance {
         val K1 = 111.13209 - (0.56605 * cos(2 * meanLat)) + (0.00120 * cos(4 * meanLat))
         val K2 = (111.41513 * cos(meanLat)) - (0.09455 * cos(3 * meanLat)) + (0.00012 * cos(5 * meanLat))
                 
-        return sqrt(pow(K1 * latDelta, 2) + pow(K2 * lonDelta, 2))
+        sqrt(pow(K1 * latDelta, 2) + pow(K2 * lonDelta, 2))
     }
+    
+    def haversine(fst:(Double,Double),snd:(Double,Double)): Double = {
+        val (lat1, lon1) = (toRadians(fst._1), toRadians(fst._2))
+        val (lat2, lon2) = (toRadians(snd._1), toRadians(snd._2))
+         
+        val latDelta = lat2 - lat1
+        val lonDelta = lon2 - lon1
+        
+        val a = pow(sin(latDelta/2), 2) + cos(lat1) * cos(lat2) * pow(sin(lonDelta/2), 2)
+        val c = 2 * asin(sqrt(a))
+        
+        R * c
+    }
+    
+    def bearing(fst:(Double,Double),snd:(Double,Double)): Double = {
+        val (lat1, lon1) = (toRadians(fst._1), toRadians(fst._2))
+        val (lat2, lon2) = (toRadians(snd._1), toRadians(snd._2))
+        
+        val latDelta = lat2 - lat1
+        val lonDelta = lon2 - lon1
+        
+        val y = sin(lonDelta) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lonDelta)
+        
+        atan2(y, x).toDegrees
+    }
+    
 }
