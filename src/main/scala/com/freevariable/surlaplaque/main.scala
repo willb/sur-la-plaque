@@ -11,6 +11,16 @@ import com.freevariable.surlaplaque.mmp._
 import com.freevariable.surlaplaque.app._
 
 
+object ReplHarness extends Common {
+    
+    def setup(args: Array[String]) = {
+        // XXX: add optional parameters here to support cluster execution
+        val app = new SLP(new SparkContext(master, appName))
+        
+        app.processFiles(SLP.expandArgs(args))
+    }
+}
+
 object BucketApp extends Common {
     
     def main(args: Array[String]) {
@@ -29,6 +39,20 @@ object BucketApp extends Common {
             })
         
         Console.println(buckets)
+    }
+}
+
+object BucketClusterApp extends Common {
+    
+    def main(args: Array[String]) {
+        // XXX: add optional parameters here to support cluster execution
+        val app = new SLP(new SparkContext(master, appName))
+        
+        val data = app.processFiles(SLP.expandArgs(args))
+        
+        val emptyBuckets = ZoneHistogram.make(ftp)
+        
+        val tp_pairs = data.map((tp:Trackpoint) => (tp.activity, tp))
     }
 }
 
