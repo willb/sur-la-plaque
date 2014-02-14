@@ -42,7 +42,7 @@ object TCX2CSV {
 
 object TCX2Json {
    import java.io._
-   import com.freevariable.surlaplaque.SLP.expandArgs
+   import com.freevariable.surlaplaque.app.SLP.expandArgs
    
    def outputFile = sys.env.get("TCX2J_OUTPUT_FILE") match {
        case Some("--") => new PrintWriter(System.err)
