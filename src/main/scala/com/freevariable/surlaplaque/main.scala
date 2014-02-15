@@ -98,7 +98,8 @@ object BucketClusterApp extends Common {
         Console.println("===============\n\n")
 
         for ((center,k) <- model.clusterCenters.view.zipWithIndex) {
-            Console.println(s"Cluster $k is centered at $center")
+            val cstr = center.toList.map(_*100).map("%.1f%%".format(_)).reduce(_ + ", " + _)
+            Console.println(s"Cluster $k is centered at $cstr")
         }
     }
 }
