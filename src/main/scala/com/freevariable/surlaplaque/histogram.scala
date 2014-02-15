@@ -4,7 +4,7 @@ case class ZoneBuckets(z0:Long, z1:Long, z2:Long, z3:Long, z4:Long, z5:Long, z6:
     def +(other: ZoneBuckets) = new ZoneBuckets(z0+other.z0, z1+other.z1, z2+other.z2, z3+other.z3, z4+other.z4, z5+other.z5, z6+other.z6, z7+other.z7)
     lazy val percentages  = {
         val total = (z0 + z1 + z2 + z3 + z4 + z5 + z6 + z7).toDouble;
-        (z0 / total, z1/total, z2/total, z3/total, z4/total, z5/total, z6/total, z7/total)
+        Array(z0 / total, z1/total, z2/total, z3/total, z4/total, z5/total, z6/total, z7/total)
     }
 }
 
