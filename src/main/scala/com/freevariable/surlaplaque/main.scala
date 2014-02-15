@@ -60,12 +60,15 @@ object BucketClusterApp extends Common {
         abuckets
     }
     
-    def main(args: Array[String]) {
+    def run(args: Array[String]) = {
         val abuckets = activityBuckets(args)
         
         for ((activity, zb) <- abuckets.collect) {
-            Console.println(s"$activity -> $zb")
+            val zbp = zb.percentages
+            Console.println(s"$activity -> $zbp")
         }
+        
+        abuckets
     }
 }
 
