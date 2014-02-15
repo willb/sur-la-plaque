@@ -44,15 +44,28 @@ object BucketApp extends Common {
 
 object BucketClusterApp extends Common {
     
-    def main(args: Array[String]) {
+    def activityBuckets(args: Array[String]) = {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         
         val data = app.processFiles(SLP.expandArgs(args))
         
-        val emptyBuckets = ZoneHistogram.make(ftp)
+        val zh = ZoneHistogram.make(ftp)
         
-        val tp_pairs = data.map((tp:Trackpoint) => (tp.activity, tp))
+        val tpairs = data.map((tp:Trackpoint) => (tp.activity.getOrElse(""), tp))
+        val pairhists = tpairs.mapValues((tp:Trackpoint)=>zh.record(tp.watts).buckets)
+        val zbcompose = ((z1:ZoneBuckets, z2:ZoneBuckets) => z1 + z2)
+        val abuckets = pairhists.foldByKey(ZoneBuckets.empty)(zbcompose)
+
+        abuckets
+    }
+    
+    def main(args: Array[String]) {
+        val abuckets = activityBuckets(args)
+        
+        for ((activity, zb) <- abuckets.collect) {
+            Console.println(s"$activity -> $zb")
+        }
     }
 }
 

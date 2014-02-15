@@ -9,7 +9,7 @@ import org.json4s.jackson.JsonMethods._
 
 object extract {
     
-    def tupleFromTrackpoint(tp: scala.xml.Node) = Trackpoint(timestamp(tp), latlong(tp), alt(tp), watts(tp) )
+    def tupleFromTrackpoint(tp: scala.xml.Node, f: Option[String] = None) = Trackpoint(timestamp(tp), latlong(tp), alt(tp), watts(tp), f )
 
     def timestamp(tp: scala.xml.Node) = (tp \ "Time").text
 
@@ -28,7 +28,7 @@ object extract {
     
     def trackpointDataFromFile(tcx: String) = {
         val tcxTree = XML.loadFile(tcx)
-        (tcxTree \\ "Trackpoint").map(extract.tupleFromTrackpoint(_))
+        (tcxTree \\ "Trackpoint").map(extract.tupleFromTrackpoint(_, Some(tcx)))
     }
 }
 
