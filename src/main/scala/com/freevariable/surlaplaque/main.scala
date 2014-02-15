@@ -61,7 +61,7 @@ object BucketClusterApp extends Common {
     }
     
     def run(args: Array[String]) = {
-        val abuckets = activityBuckets(args)
+        val abuckets = activityBuckets(args).cache
         
         for ((activity, zb) <- abuckets.collect) {
             val zbp = zb.percentages
@@ -69,6 +69,37 @@ object BucketClusterApp extends Common {
         }
         
         abuckets
+    }
+    
+    def main(args: Array[String]) {
+        val numClusters = getEnvValue("SLP_HISTOGRAM_CLUSTERS", "8").toInt
+        val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
+        
+        val abuckets = activityBuckets(args).cache
+        val vectors = abuckets.map((tup) => {val (a,zb) = tup ; zb.percentages})
+        
+        val km = new KMeans()
+        km.setK(numClusters)
+        km.setMaxIterations(numIterations)
+        
+        val model = km.run(vectors)
+        
+        val labeledVectors = abuckets.map((tup) => {val (act, zb) = tup; (act, model.predict(zb.percentages))})
+
+        Console.println("CLUSTERINGS")
+        Console.println("===========\n\n")
+
+        for ((activity, cluster) <- labeledVectors.collect) {
+            Console.println(s"$activity is in $cluster")
+        }
+        
+        Console.println("\n")
+        Console.println("CLUSTER CENTERS")
+        Console.println("===============\n\n")
+
+        for ((center,k) <- model.clusterCenters.view.zipWithIndex) {
+            Console.println(s"Cluster $k is centered at $center")
+        }
     }
 }
 
