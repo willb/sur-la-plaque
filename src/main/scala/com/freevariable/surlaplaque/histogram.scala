@@ -6,6 +6,18 @@ case class ZoneBuckets(z0:Long, z1:Long, z2:Long, z3:Long, z4:Long, z5:Long, z6:
         val total = (z0 + z1 + z2 + z3 + z4 + z5 + z6 + z7).toDouble;
         Array(z0 / total, z1/total, z2/total, z3/total, z4/total, z5/total, z6/total, z7/total)
     }
+    def addToBucket(bucket:Int, ct:Long=1) = {
+        bucket match {
+            case 0 => new ZoneBuckets(z0+ct,z1,z2,z3,z4,z5,z6,z7)
+            case 1 => new ZoneBuckets(z0,z1+ct,z2,z3,z4,z5,z6,z7)
+            case 2 => new ZoneBuckets(z0,z1,z2+ct,z3,z4,z5,z6,z7)
+            case 3 => new ZoneBuckets(z0,z1,z2,z3+ct,z4,z5,z6,z7)
+            case 4 => new ZoneBuckets(z0,z1,z2,z3,z4+ct,z5,z6,z7)
+            case 5 => new ZoneBuckets(z0,z1,z2,z3,z4,z5+ct,z6,z7)
+            case 6 => new ZoneBuckets(z0,z1,z2,z3,z4,z5,z6+ct,z7)
+            case 7 => new ZoneBuckets(z0,z1,z2,z3,z4,z5,z6,z7+ct)
+        }
+    }
 }
 
 object ZoneBuckets {
@@ -31,5 +43,19 @@ object ZoneHistogram {
         }
         )
         new ZoneHistogram(ZoneBuckets.empty(), recorder)
+    }
+    
+    def makeBucketChooser(ftp:Int) = {
+        ((sample:Double) => sample match {
+            case d:Double if d < 1 => 0
+            case d:Double if d > 0 && d <= ftp * 0.55 => 1
+            case d:Double if d <= ftp * 0.75 => 2
+            case d:Double if d <= ftp * 0.9 => 3
+            case d:Double if d <= ftp * 1.05 => 4
+            case d:Double if d <= ftp * 1.2 => 5
+            case d:Double if d <= ftp * 1.5 => 6
+            case d:Double if d > ftp * 1.5 => 7
+        }
+        )
     }
 }

@@ -43,6 +43,7 @@ object BucketApp extends Common {
 }
 
 object BucketClusterApp extends Common {
+    import scala.compat.Platform.currentTime
     
     def activityBuckets(args: Array[String]) = {
         // XXX: add optional parameters here to support cluster execution
@@ -50,10 +51,15 @@ object BucketClusterApp extends Common {
         
         val data = app.processFiles(SLP.expandArgs(args))
         
-        val zh = ZoneHistogram.make(ftp)
+        val zb = ZoneBuckets.empty
+        val zc = ZoneHistogram.makeBucketChooser(ftp)
         
-        val tpairs = data.map((tp:Trackpoint) => (tp.activity.getOrElse(""), tp))
-        val pairhists = tpairs.mapValues((tp:Trackpoint)=>zh.record(tp.watts).buckets)
+        val tpairs = data.map((tp:Trackpoint) => Pair(Pair(tp.activity.getOrElse("UNKNOWN"), zc(tp.watts)), 1))
+        
+        val bucketCounts = tpairs.reduceByKey(_ + _)
+        val reassociated = bucketCounts.map((tup) => tup match {case ((a,b),c) => (a, (b,c)) })
+        
+        val pairhists = reassociated.mapValues((pr)=>{ val(b,ct) = pr ; zb.addToBucket(b,ct)})
         val zbcompose = ((z1:ZoneBuckets, z2:ZoneBuckets) => z1 + z2)
         val abuckets = pairhists.foldByKey(ZoneBuckets.empty)(zbcompose)
 
@@ -75,6 +81,8 @@ object BucketClusterApp extends Common {
         val numClusters = getEnvValue("SLP_HISTOGRAM_CLUSTERS", "8").toInt
         val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
         
+		val before = currentTime
+		
         val abuckets = activityBuckets(args).cache
         val vectors = abuckets.map((tup) => {val (a,zb) = tup ; zb.percentages})
         
@@ -85,6 +93,7 @@ object BucketClusterApp extends Common {
         val model = km.run(vectors)
         
         val labeledVectors = abuckets.map((tup) => {val (act, zb) = tup; (act, model.predict(zb.percentages))})
+        val after = currentTime
 
         Console.println("CLUSTERINGS")
         Console.println("===========\n\n")
@@ -101,6 +110,9 @@ object BucketClusterApp extends Common {
             val cstr = center.toList.map(_*100).map("%.1f%%".format(_)).reduce(_ + ", " + _)
             Console.println(s"Cluster $k is centered at $cstr")
         }
+
+        val time_ms = after - before
+        Console.println(s"\n\n RUN TOOK $time_ms ms")
     }
 }
 
