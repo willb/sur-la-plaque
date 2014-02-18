@@ -62,7 +62,9 @@ object WaveletClusterApp extends Common {
     import scala.compat.Platform.currentTime
     import org.apache.spark.rdd.RDD
     import com.freevariable.surlaplaque.wavelets._
-            
+    
+    val OFFSET = 30
+    
     def processActivities(args: Array[String]) = {
         val app = new SLP(new SparkContext(master, appName))
         
@@ -72,6 +74,7 @@ object WaveletClusterApp extends Common {
         
         val activities = apairs.keys.distinct.collect
         
+        // XXX: this is bogus
         val pairs = for (activity <- activities) yield {
             val filtered = apairs.filter((tup) => {val (a,_) = tup ; a == activity})
             val timestampedTrackpoints = filtered.map((tup) => {val (_,(t,tp)) = tup; (t, tp.watts)}).sortByKey()
@@ -83,7 +86,7 @@ object WaveletClusterApp extends Common {
                 
         pair_rdd.flatMap((pair) => {
             val (activity, samples) = pair
-            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples).zipWithIndex)) yield ((activity,idx), wavelet)
+            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET).zipWithIndex)) yield ((activity,idx), wavelet)
         })
     }
     
@@ -110,7 +113,7 @@ object WaveletClusterApp extends Common {
         val afterClustering = currentTime
         
         val clusterTime = afterClustering - beforeClustering
-        Console.println(s"Cluster optimization took $clusterTime ms")
+        Console.println(s"Cluster centroid optimization took $clusterTime ms")
         
         (awpairs, model)
     }
@@ -122,7 +125,13 @@ object WaveletClusterApp extends Common {
          
          for (tup <- predictions) {
              tup match {
-                 case (ctr,(a,o)) => Console.println(s"$a at offset $o is in cluster $ctr")
+                 case (ctr,(a,o)) => {
+                     val hours = (o * OFFSET) % (60*60)
+                     val minutes = ((o * OFFSET) / 60) % (60*60)
+                     val seconds = (o * OFFSET) % 60
+
+                     Console.println("%s at offset %d:%02d:%02d is in cluster %d".format(a, hours, minutes, seconds, ctr))
+                 }
              }
          }
      }
