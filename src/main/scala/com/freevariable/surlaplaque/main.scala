@@ -10,12 +10,11 @@ import com.freevariable.surlaplaque.data._
 import com.freevariable.surlaplaque.mmp._
 import com.freevariable.surlaplaque.app._
 
-
 object ReplHarness extends Common {
     
-    def setup(args: Array[String]) = {
+    def setup(args: Array[String], providedApp: Option[SLP] = None) = {
         // XXX: add optional parameters here to support cluster execution
-        val app = new SLP(new SparkContext(master, appName))
+        val app = providedApp.getOrElse(new SLP(new SparkContext(master, appName)))
         
         app.processFiles(SLP.expandArgs(args))
     }
@@ -57,6 +56,76 @@ object BucketApp extends Common {
         
         Console.println(buckets)
     }
+}
+
+object WaveletClusterApp extends Common {
+    import scala.compat.Platform.currentTime
+    import org.apache.spark.rdd.RDD
+    import com.freevariable.surlaplaque.wavelets._
+            
+    def processActivities(args: Array[String]) = {
+        val app = new SLP(new SparkContext(master, appName))
+        
+        val data = ReplHarness.setup(args, Some(app))
+        
+        val apairs = data.map((tp:Trackpoint) => Pair(tp.activity.getOrElse("UNKNOWN"), Pair(tp.timestamp, tp)))
+        
+        val activities = apairs.keys.distinct.collect
+        
+        val pairs = for (activity <- activities) yield {
+            val filtered = apairs.filter((tup) => {val (a,_) = tup ; a == activity})
+            val timestampedTrackpoints = filtered.map((tup) => {val (_,(t,tp)) = tup; (t, tp.watts)}).sortByKey()
+            val samples = timestampedTrackpoints.collect
+            Pair(activity, samples.map((ttp) => ttp._2))
+        }
+                
+        val pair_rdd = app.context.parallelize(pairs)
+                
+        pair_rdd.flatMap((pair) => {
+            val (activity, samples) = pair
+            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples).zipWithIndex)) yield ((activity,idx), wavelet)
+        })
+    }
+    
+    def findClusters(awpairs: RDD[((String, Int), Array[Double])]) = {
+        val numClusters = getEnvValue("SLP_WAVELET_CLUSTERS", "24").toInt
+        val numIterations = getEnvValue("SLP_ITERATIONS", "50").toInt
+
+        val km = new KMeans()
+        km.setK(numClusters)
+        km.setMaxIterations(numIterations)
+        km.run(awpairs.map((tup) => {val (_,darr) = tup ; darr}).cache)
+    }
+    
+    def runClustering(args: Array[String]) = {
+        val beforeWavelets = currentTime
+        val awpairs = processActivities(args)
+        val afterWavelets = currentTime
+
+        val waveletTime = afterWavelets - beforeWavelets
+        Console.println(s"Wavelet transformation took $waveletTime ms")
+
+        val beforeClustering = currentTime
+        val model = findClusters(awpairs)
+        val afterClustering = currentTime
+        
+        val clusterTime = afterClustering - beforeClustering
+        Console.println(s"Cluster optimization took $clusterTime ms")
+        
+        (awpairs, model)
+    }
+            
+     def main(args: Array[String]) = {
+         val (awpairs, model) = runClustering(args)
+         
+         val predictions = awpairs.map({case (activityAndOffset, coeffs) => (model.predict(coeffs), activityAndOffset)}).sortByKey().collect
+         
+         for (tup <- predictions) {
+             tup match {
+                 case (ctr,(a,o)) => Console.println(s"$a at offset $o is in cluster $ctr")
+             }
+         }
+     }
 }
 
 object BucketClusterApp extends Common {

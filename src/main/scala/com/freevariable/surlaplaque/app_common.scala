@@ -31,6 +31,8 @@ class SLP(sc: SparkContext) {
 
     def processFiles(files: Array[String], period: Int) = 
         sc.parallelize(files.flatMap((s:String) => MMP.calculate(extract.trackpointDataFromFile(s).toList, period)))
+        
+    def context = sc
 }
 
 trait Common {
