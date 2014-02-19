@@ -24,7 +24,7 @@ object SLP {
 
 class SLP(sc: SparkContext) {
     import com.freevariable.surlaplaque.importer.extract
-    import com.freevariable.surlaplaque.mmp.MMP
+    import com.freevariable.surlaplaque.power.MMP
     
     def processFiles(files: Array[String]) = 
         sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))

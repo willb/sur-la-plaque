@@ -7,7 +7,7 @@ import org.apache.spark.mllib.clustering._
 
 import com.freevariable.surlaplaque.importer._
 import com.freevariable.surlaplaque.data._
-import com.freevariable.surlaplaque.mmp._
+// import com.freevariable.surlaplaque.power._
 import com.freevariable.surlaplaque.app._
 
 object ReplHarness extends Common {
@@ -62,8 +62,10 @@ object WaveletClusterApp extends Common {
     import scala.compat.Platform.currentTime
     import org.apache.spark.rdd.RDD
     import com.freevariable.surlaplaque.wavelets._
+    import com.freevariable.surlaplaque.power.NP
     
     val OFFSET = 30
+    val KEEP = 0.8
     
     def processActivities(args: Array[String]) = {
         val app = new SLP(new SparkContext(master, appName))
@@ -74,7 +76,7 @@ object WaveletClusterApp extends Common {
         
         val activities = apairs.keys.distinct.collect
         
-        // XXX: this is bogus
+        // XXX: this is somewhat bogus
         val pairs = for (activity <- activities) yield {
             val filtered = apairs.filter((tup) => {val (a,_) = tup ; a == activity})
             val timestampedTrackpoints = filtered.map((tup) => {val (_,(t,tp)) = tup; (t, tp.watts)}).sortByKey()
@@ -82,11 +84,13 @@ object WaveletClusterApp extends Common {
             Pair(activity, samples.map((ttp) => ttp._2))
         }
                 
-        val pair_rdd = app.context.parallelize(pairs)
-                
-        pair_rdd.flatMap((pair) => {
+        app.context.parallelize(pairs)
+    }
+    
+    def transformWavelets(rdd: RDD[(String, Array[Double])]) = {
+        rdd.flatMap((pair) => {
             val (activity, samples) = pair
-            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET).zipWithIndex)) yield ((activity,idx), wavelet)
+            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET, keepRatio=KEEP).zipWithIndex)) yield ((activity,idx), wavelet)
         })
     }
     
@@ -102,7 +106,8 @@ object WaveletClusterApp extends Common {
     
     def runClustering(args: Array[String]) = {
         val beforeWavelets = currentTime
-        val awpairs = processActivities(args)
+        val aspairs = processActivities(args).cache
+        val awpairs = transformWavelets(aspairs)
         val afterWavelets = currentTime
 
         val waveletTime = afterWavelets - beforeWavelets
@@ -115,22 +120,24 @@ object WaveletClusterApp extends Common {
         val clusterTime = afterClustering - beforeClustering
         Console.println(s"Cluster centroid optimization took $clusterTime ms")
         
-        (awpairs, model)
+        (aspairs, awpairs, model)
     }
             
      def main(args: Array[String]) = {
-         val (awpairs, model) = runClustering(args)
+         val (aspairs, awpairs, model) = runClustering(args)
          
-         val predictions = awpairs.map({case (activityAndOffset, coeffs) => (model.predict(coeffs), activityAndOffset)}).sortByKey().collect
+         val predictions = awpairs.map({case (activityAndOffset, coeffs) => (model.predict(coeffs), activityAndOffset)}).sortByKey()
+         val np_pairs = awpairs.map({case (activityAndOffset, samples) => (activityAndOffset, NP.calculate(samples))}).collectAsMap()
          
-         for (tup <- predictions) {
+         for (tup <- predictions.collect) {
              tup match {
-                 case (ctr,(a,o)) => {
-                     val hours = (o * OFFSET) % (60*60)
-                     val minutes = ((o * OFFSET) / 60) % (60*60)
+                 case (ctr,ao @ (a,o)) => {
+                     val hours = (o * OFFSET) / (60*60)
+                     val minutes = ((o * OFFSET) / 60) - (hours*60)
                      val seconds = (o * OFFSET) % 60
+                     val np = np_pairs.getOrElse(ao, -1.0)
 
-                     Console.println("%s at offset %d:%02d:%02d is in cluster %d".format(a, hours, minutes, seconds, ctr))
+                     Console.println("%s at offset %d:%02d:%02d (NP %f) is in cluster %d".format(a, hours, minutes, seconds, np, ctr))
                  }
              }
          }
@@ -270,6 +277,7 @@ object GPSClusterApp extends Common {
 }
 
 object MMPClusterApp extends Common {
+    import com.freevariable.surlaplaque.power.MMPTrackpoint
     
     def main(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution

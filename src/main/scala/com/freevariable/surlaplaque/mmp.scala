@@ -1,4 +1,4 @@
-package com.freevariable.surlaplaque.mmp;
+package com.freevariable.surlaplaque.power;
 
 import com.freevariable.surlaplaque.data._
 
@@ -19,4 +19,9 @@ object MMP {
         val mmps = (wattages sliding period) map ((lastWatts:List[Double]) => lastWatts.sum / period)
         (data, mmps.toIterable).zipped.map(MMPTrackpoint(_, period, _))
     }
+}
+
+object NP {
+    def calculate(data: Array[Double]) = 
+        math.pow((data sliding 30).map(_.reduce(_+_) / 30.0).map(math.pow(_, 4)).reduce(_+_), 1.0/4)
 }
