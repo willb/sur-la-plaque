@@ -83,14 +83,14 @@ object WaveletClusterApp extends Common {
             val samples = timestampedTrackpoints.collect
             Pair(activity, samples.map((ttp) => ttp._2))
         }
-                
+        
         app.context.parallelize(pairs)
     }
     
-    def transformWavelets(rdd: RDD[(String, Array[Double])]) = {
+    def transformWavelets(rdd: RDD[(String, Array[Double])], keep: Double) = {
         rdd.flatMap((pair) => {
             val (activity, samples) = pair
-            for ((wavelet,idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET, keepRatio=KEEP).zipWithIndex)) yield ((activity,idx), wavelet)
+            for (((wavelet, sampleWindow),idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET, keepRatio=keep).zipWithIndex)) yield ((activity,idx), wavelet, sampleWindow)
         })
     }
     
@@ -107,14 +107,16 @@ object WaveletClusterApp extends Common {
     def runClustering(args: Array[String]) = {
         val beforeWavelets = currentTime
         val aspairs = processActivities(args).cache
-        val awpairs = transformWavelets(aspairs)
+        val keep = getEnvValue("SLP_COEFFICIENT_KEEP_RATIO", "1.0").toDouble
+        
+        val awpairs = transformWavelets(aspairs, keep)
         val afterWavelets = currentTime
 
         val waveletTime = afterWavelets - beforeWavelets
         Console.println(s"Wavelet transformation took $waveletTime ms")
 
         val beforeClustering = currentTime
-        val model = findClusters(awpairs)
+        val model = findClusters(awpairs.map({case(ao,w,smps) => (ao,w)}).cache)
         val afterClustering = currentTime
         
         val clusterTime = afterClustering - beforeClustering
@@ -126,8 +128,8 @@ object WaveletClusterApp extends Common {
      def main(args: Array[String]) = {
          val (aspairs, awpairs, model) = runClustering(args)
          
-         val predictions = awpairs.map({case (activityAndOffset, coeffs) => (model.predict(coeffs), activityAndOffset)}).sortByKey()
-         val np_pairs = awpairs.map({case (activityAndOffset, samples) => (activityAndOffset, NP.calculate(samples))}).collectAsMap()
+         val predictions = awpairs.map({case (activityAndOffset, coeffs, _s) => (model.predict(coeffs), activityAndOffset)}).sortByKey()
+         val np_pairs = awpairs.map({case (activityAndOffset, _c, samples) => (activityAndOffset, NP.calculate(samples))}).collectAsMap()
          
          for (tup <- predictions.collect) {
              tup match {
@@ -140,6 +142,11 @@ object WaveletClusterApp extends Common {
                      Console.println("%s at offset %d:%02d:%02d (NP %f) is in cluster %d".format(a, hours, minutes, seconds, np, ctr))
                  }
              }
+         }
+         
+         for ((activity, samples) <- aspairs) {
+             val np = NP.calculate(samples)
+             Console.println(s"NP for $activity is $np")
          }
      }
 }
