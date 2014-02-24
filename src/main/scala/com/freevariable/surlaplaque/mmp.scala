@@ -22,6 +22,14 @@ object MMP {
 }
 
 object NP {
-    def calculate(data: Array[Double]) = 
-        math.pow((data sliding 30).map(_.reduce(_+_) / 30.0).map(math.pow(_, 4)).reduce(_+_), 1.0/4)
+    def mean(i: Iterator[Double]) = {
+        val (tot, ct) = i.aggregate((0.0,0))({case ((t,c),smp) => (smp+t, c+1)}, {case ((t1,c1), (t2,c2)) => (t1+t2, c1+c2)})
+        tot/ct
+    }
+    
+    def calculate(data: Array[Double]) = {
+        val rollingAverages = (data sliding 30).map(_.reduce (_+_) / 30.0)
+        val weightedAverages = rollingAverages.map(math.pow(_, 4))
+        math.pow(mean(weightedAverages), 1.0/4)
+    }
 }
