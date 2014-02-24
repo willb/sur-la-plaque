@@ -65,7 +65,7 @@ object WaveletClusterApp extends Common {
     import com.freevariable.surlaplaque.power.NP
     
     val OFFSET = 30
-    val KEEP = 0.8
+    val KEEP = 0.15
     
     def processActivities(args: Array[String]) = {
         val app = new SLP(new SparkContext(master, appName))
@@ -107,7 +107,7 @@ object WaveletClusterApp extends Common {
     def runClustering(args: Array[String]) = {
         val beforeWavelets = currentTime
         val aspairs = processActivities(args).cache
-        val keep = getEnvValue("SLP_COEFFICIENT_KEEP_RATIO", "1.0").toDouble
+        val keep = getEnvValue("SLP_COEFFICIENT_KEEP_RATIO", KEEP.toString).toDouble
         
         val awpairs = transformWavelets(aspairs, keep)
         val afterWavelets = currentTime
