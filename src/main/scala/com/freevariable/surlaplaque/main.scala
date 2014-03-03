@@ -63,12 +63,18 @@ object WaveletClusterApp extends Common {
     import org.apache.spark.rdd.RDD
     import com.freevariable.surlaplaque.wavelets._
     import com.freevariable.surlaplaque.power.NP
+    import org.apache.spark.SparkConf
     
     val OFFSET = 30
     val KEEP = 0.15
     
     def processActivities(args: Array[String]) = {
-        val app = new SLP(new SparkContext(master, appName))
+        val conf = new SparkConf()
+                     .setMaster(master)
+                     .setAppName(appName)
+                     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+
+        val app = new SLP(new SparkContext(conf))
         
         val data = ReplHarness.setup(args, Some(app))
         
