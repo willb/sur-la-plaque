@@ -1,8 +1,7 @@
 package com.freevariable.surlaplaque.wavelets
 
 
-
-object WaveletExtractor {
+class WaveletExtractor(windowSize: Int, skip: Int, keepRatio: Double) extends Serializable {
     import breeze.linalg._
     import breeze.signal._
 
@@ -20,7 +19,11 @@ object WaveletExtractor {
         samples.map((smp) => if (math.abs(smp) < minMag) 0.0 else smp)
     }
 
-    def transformAndAbstract(samples: Array[Double], windowSize: Int = 1024, skip: Int = 30, keepRatio: Double = 0.15) = 
+    def transformAndAbstract(samples: Array[Double]) = 
         for (window <- samples.sliding(windowSize, skip))
             yield (sparsify(waveletize(window), keepRatio), window)
+}
+
+object WaveletExtractor {
+    def apply(windowSize: Int=1024, skip: Int=30, keepRatio: Double=0.15) = new WaveletExtractor(windowSize, skip, keepRatio)
 }

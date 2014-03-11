@@ -94,9 +94,10 @@ object WaveletClusterApp extends Common {
     }
     
     def transformWavelets(rdd: RDD[(String, Array[Double])], keep: Double) = {
+        val we = new WaveletExtractor(1024, OFFSET, keep)
         rdd.flatMap((pair) => {
             val (activity, samples) = pair
-            for (((wavelet, sampleWindow),idx) <- (WaveletExtractor.transformAndAbstract(samples, skip=OFFSET, keepRatio=keep).zipWithIndex)) yield ((activity,idx), wavelet, sampleWindow)
+            for (((wavelet, sampleWindow),idx) <- (we.transformAndAbstract(samples).zipWithIndex)) yield ((activity,idx), wavelet, sampleWindow)
         })
     }
     
