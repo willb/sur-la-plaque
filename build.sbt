@@ -31,7 +31,7 @@ libraryDependencies += "org.json4s" %%  "json4s-jackson" % "3.2.6"
 resolvers ++= Seq(
             "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
             "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-            "Spark snapshots" at "https://repository.apache.org/content/repositories/orgapachespark-1007/"
+            "Spark snapshots" at "https://repository.apache.org/content/repositories/orgapachespark-1009/"
 )
 
 libraryDependencies += "org.scalanlp" %% "breeze" % "0.6"
