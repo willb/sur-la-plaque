@@ -131,12 +131,17 @@ object WaveletClusterApp extends Common {
         
         (aspairs, awpairs, model)
     }
-            
+    
      def main(args: Array[String]) = {
          val (aspairs, awpairs, model) = runClustering(args)
          
+         val calculate_np = NP.calculate _
+         
          val predictions = awpairs.map({case (activityAndOffset, coeffs, _s) => (model.predict(coeffs), activityAndOffset)}).sortByKey()
-         val np_pairs = awpairs.map({case (activityAndOffset, _c, samples) => (activityAndOffset, NP.calculate(samples))}).collectAsMap()
+         val np_pairs = awpairs.map({case (activityAndOffset, _c, samples) => (activityAndOffset, calculate_np(samples))}).collectAsMap()
+         val kj_rdd = awpairs.map({case (aao,c,s) => (aao,s.reduce(_ + _) / 1000.0)}).cache
+         val kj_pairs = kj_rdd.collectAsMap()
+         val top_kjs = kj_rdd.map({case (aao,kj) => (kj, aao)}).sortByKey().collect()
          
          for (tup <- predictions.collect) {
              tup match {
@@ -145,15 +150,26 @@ object WaveletClusterApp extends Common {
                      val minutes = ((o * OFFSET) / 60) - (hours*60)
                      val seconds = (o * OFFSET) % 60
                      val np = np_pairs.getOrElse(ao, -1.0)
-
-                     Console.println("%s at offset %d:%02d:%02d (NP %f) is in cluster %d".format(a, hours, minutes, seconds, np, ctr))
+                     val kj = kj_pairs.getOrElse(ao, -1.0)
+                     Console.println("%s at offset %d:%02d:%02d (NP %f, kj %f) is in cluster %d".format(a, hours, minutes, seconds, np, kj, ctr))
                  }
              }
          }
          
+         for (tup <- top_kjs) {
+           val (kj, aao) = tup
+           val (a,o) = aao
+           val hours = (o * OFFSET) / (60*60)
+           val minutes = ((o * OFFSET) / 60) - (hours*60)
+           val seconds = (o * OFFSET) % 60
+
+           Console.println("%s at offset %d:%02d:%02d was %f kj".format(a, hours, minutes, seconds, kj))
+         }
+         
          for ((activity, samples) <- aspairs) {
              val np = NP.calculate(samples)
-             Console.println(s"NP for $activity is $np")
+             val kj = samples.reduce(_ + _) / 1000
+             Console.println(s"NP for $activity is $np ($kj kj)")
          }
      }
 }
