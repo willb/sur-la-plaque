@@ -101,6 +101,13 @@ object WaveletClusterApp extends Common {
         })
     }
     
+    def findMMPs(rdd: RDD[(String, Array[Double])], period: Int = 120) = {
+      rdd.flatMap({case (activity, samples) => 
+        val mmps = (samples sliding period).map(window => window.reduce(_+_) / period)
+        mmps.zipWithIndex.map(tup => (activity, tup._1, tup._2))
+        })
+    }
+    
     def findClusters(awpairs: RDD[((String, Int), Array[Double])]) = {
         val numClusters = getEnvValue("SLP_WAVELET_CLUSTERS", "24").toInt
         val numIterations = getEnvValue("SLP_ITERATIONS", "50").toInt
