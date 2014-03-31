@@ -30,5 +30,7 @@ case class StreamRecorder(count: Long, min: Double, max: Double, mean: Double, s
 
 object StreamRecorder {
   import java.lang.{Double => JDouble}
+  
+  def apply() = empty
   def empty = new StreamRecorder(0, JDouble.MAX_VALUE, JDouble.MIN_VALUE, 0, 0)
 }
