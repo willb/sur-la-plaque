@@ -8,7 +8,7 @@ package com.freevariable.surlaplaque.util;
 
     [1] ok, ok, that the Earth is an ellipsoid projected to a plane
 */
-object RWDistance {
+trait RealWorldDistance {
     import math.{cos, sin, asin, atan2}
     import math.sqrt
     import math.pow
@@ -58,5 +58,6 @@ object RWDistance {
         
         atan2(y, x).toDegrees
     }
-    
 }
+
+object RWDistance extends RealWorldDistance {}
