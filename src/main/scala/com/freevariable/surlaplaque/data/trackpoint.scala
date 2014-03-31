@@ -41,7 +41,7 @@ sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Do
   import scala.math.Ordered.orderingToOrdered
   import Timestamp.{stringify => stringify_ts}
   
-  val timestring = stringifyTs(timestamp)
+  val timestring = stringify_ts(timestamp)
     
   def elevDelta(other: Trackpoint) = other.altitude - altitude
   def timeDelta(other: Trackpoint) = (other.timestamp - timestamp).toDouble / 1000
@@ -53,7 +53,7 @@ sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Do
     rise/run
   }
     
-  def compare(other: Coordinates) = (this.latlong, this.timestamp, this.altitude, this.watts) compare (other.latlong, other.timestamp, other.altitude, other.watts)
+  def compare(other: Trackpoint) = (this.latlong.lon, this.latlong.lat, this.timestamp, this.altitude, this.watts) compare (other.latlong.lon, other.latlong.lat, other.timestamp, other.altitude, other.watts)
 }
 
 object Timestamp {

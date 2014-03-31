@@ -1,6 +1,6 @@
 // not-particularly-robust geometrical primitives
 
-package com.freevariable.surlaplaque
+package com.freevariable.surlaplaque.util
 
 import com.freevariable.surlaplaque.data.{Coordinates, Trackpoint}
 
