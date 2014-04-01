@@ -14,16 +14,22 @@ object GPSClusterApp extends Common {
     import spray.json._
     import DefaultJsonProtocol._
     import org.apache.spark.rdd.RDD
+    import org.apache.spark.SparkConf
+    
     import com.freevariable.surlaplaque.util.ConvexHull
     
     def main(args: Array[String]) {
-        // XXX: add optional parameters here to support cluster execution
-        val app = new SLP(new SparkContext(master, appName))
+        val conf = new SparkConf()
+                     .setMaster(master)
+                     .setAppName(appName)
+                     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+
+        val app = new SLP(new SparkContext(conf))
         
         val data = app.processFiles(SLP.expandArgs(args))
         
         val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
-        val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt
+        val numIterations = getEnvValue("SLP_ITERATIONS", "10").toInt
         
         val model = clusterPoints(data, numClusters, numIterations)
         
@@ -60,7 +66,7 @@ object GPSClusterApp extends Common {
       Map(
         "type" -> "Feature".toJson,
         "geometry" -> Map("type"->"Polygon".toJson, "coordinates"->Array((acoords ++ Array(acoords(0))).toJson).toJson).toJson,
-        "properties" -> Map("fill"->rgb((cluster*2).toByte, 0, 0)).toJson
+        "properties" -> Map("fill"->rgb((cluster*2).toByte, 0, 0), "stroke-width"->"0").toJson
       )
     }
 
