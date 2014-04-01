@@ -34,3 +34,8 @@ libraryDependencies += "org.scalanlp" %% "breeze" % "0.6"
 
 // Breeze options
 scalacOptions ++= Seq("-feature")
+
+// test deps
+libraryDependencies ++= Seq(
+  "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"
+)
