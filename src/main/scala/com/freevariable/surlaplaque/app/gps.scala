@@ -10,7 +10,7 @@ import com.freevariable.surlaplaque.data._
 // import com.freevariable.surlaplaque.power._
 import com.freevariable.surlaplaque.app._
 
-object GPSClusterApp extends Common {
+object GPSClusterApp extends Common with ActivitySliding {
     import spray.json._
     import DefaultJsonProtocol._
     import org.apache.spark.rdd.RDD
@@ -19,31 +19,57 @@ object GPSClusterApp extends Common {
     import com.freevariable.surlaplaque.util.ConvexHull
     
     def main(args: Array[String]) {
-        val conf = new SparkConf()
-                     .setMaster(master)
-                     .setAppName(appName)
-                     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      val (struct, bestPerCluster) = run(args)
+      
+      val out = outputFile
+      out.println(struct.toJson)
+      
+      out.close
+    }
+    
+    def run(args: Array[String]) = {
+      val conf = new SparkConf()
+                   .setMaster(master)
+                   .setAppName(appName)
+                   .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
-        val app = new SLP(new SparkContext(conf))
-        
-        val data = app.processFiles(SLP.expandArgs(args))
-        
-        val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
-        val numIterations = getEnvValue("SLP_ITERATIONS", "10").toInt
-        
-        val model = clusterPoints(data, numClusters, numIterations)
-        
-        val labeledVectors = data.keyBy((tp:Trackpoint) => model.predict(Array(tp.latlong.lat, tp.latlong.lon)))
-        
-        val hulls = generateHulls(data, model)
-        
-        val hullPolys = hulls.map({case (cluster, coords) => makeHullPoly(cluster, coords)}).collect
-        
-        val struct = Map("type"->"FeatureCollection".toJson, "features"->hullPolys.toJson)
-        
-        val out = outputFile
-        out.println(struct.toJson)
-        out.close
+      val app = new SLP(new SparkContext(conf))
+      
+      val data = app.processFiles(SLP.expandArgs(args))
+      
+      val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
+      val numIterations = getEnvValue("SLP_ITERATIONS", "10").toInt
+      
+      val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "60").toInt
+      
+      val model = clusterPoints(data, numClusters, numIterations)
+      
+      val hulls = generateHulls(data, model)
+
+      val mmps = windowsForActivities(data, mmpPeriod).map {case ((a,i),s) => {val ll = s.head.latlong; (Array(ll.lon, ll.lat), s.map(_.watts).reduce(_ + _) / s.size)}}
+      
+      val bestPerCluster = mmps
+        .map({case (ll:Array[Double], mmp:Double) => {val cluster = model.predict(ll); (cluster, mmp)}})
+        .reduceByKey((a:Double, b:Double) => if (a>b) a else b)
+        .collectAsMap()
+      
+      val overallBestMMP = bestPerCluster.values.max
+      val overallLeastMMP = bestPerCluster.values.min
+      
+      val colorer = ((cluster:Int) => {
+        val intensity = ((bestPerCluster.getOrElse(cluster, overallLeastMMP) - overallLeastMMP) / (overallBestMMP - overallLeastMMP))
+        val gb = (255 - (255 * intensity)).toByte
+        rgb(255.toByte, gb, gb)
+      })
+      
+      val hullPolys = hulls.map({case (cluster, coords) => makeHullPoly(cluster, coords, colorer)}).collect
+      
+      val struct = Map("type"->"FeatureCollection".toJson, "features"->hullPolys.toJson)
+      
+      Console.println(s"worst/best $mmpPeriod second MMP: $overallLeastMMP, $overallBestMMP")
+      Console.println(s"clusters->mmps $bestPerCluster")
+      
+      (struct, bestPerCluster)
     }
 
     def clusterPoints(rdd: RDD[Trackpoint], numClusters: Int, numIterations: Int) = {
@@ -60,13 +86,13 @@ object GPSClusterApp extends Common {
       clusteredPoints.map({case (ctr, pts) => (ctr, ConvexHull.calculate(pts.map(_.latlong).toList))})
     }
 
-    def makeHullPoly(cluster:Int, coords:List[Coordinates]) = {
+    def makeHullPoly(cluster:Int, coords:List[Coordinates], coloring:(Int=>String) = ((x:Int) => rgb((x*2).toByte, 0, 0))) = {
       val acoords = coords.map(c => Array(c.lon, c.lat).toJson).toArray
 
       Map(
         "type" -> "Feature".toJson,
         "geometry" -> Map("type"->"Polygon".toJson, "coordinates"->Array((acoords ++ Array(acoords(0))).toJson).toJson).toJson,
-        "properties" -> Map("fill"->rgb((cluster*2).toByte, 0, 0)/*, "stroke-width"->"0"*/).toJson
+        "properties" -> Map("fill"->coloring(cluster), "fill-opacity"->"0.8", "stroke"->"#aaaaaa"/*, "stroke-width"->"0"*/).toJson
       )
     }
 
