@@ -23,9 +23,9 @@ object ConvexHull {
   }
   
   private[this] def turnType(a:Coordinates, b:Coordinates, c:Coordinates) = {
-    val Coordinates(ax,ay) = a
-    val Coordinates(bx,by) = b
-    val Coordinates(cx,cy) = c
+    val Coordinates(ay,ax) = a
+    val Coordinates(by,bx) = b
+    val Coordinates(cy,cx) = c
     (ax*by) - (ay*bx) + (ay*cx) - (ax*cy) + (bx*cy) - (cx*by)
   }
   
