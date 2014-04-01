@@ -23,18 +23,6 @@ sealed case class Coordinates(lat: Double, lon: Double) extends Ordered[Coordina
   */
   def compare_lat(other: Coordinates) = 
     (this.lat, this.lon) compare (other.lat, other.lon)
-  
-  /**
-    Returns true if this is strictly "to the left of" (viz., to the west of, or to the south of if this and other are equally-westerly) other
-    */
-  def strictlyLeft(other: Coordinates) = (this compare other) < 0
-  
-  def strictlyRight(other: Coordinates) = (this compare other) > 0
-  
-  def strictlyAbove(other: Coordinates) = (this compare_lat other) > 0
-  
-  def strictlyBelow(other: Coordinates) = (this compare_lat other) < 0
-
 }
 
 sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String]) extends Ordered[Trackpoint] {
