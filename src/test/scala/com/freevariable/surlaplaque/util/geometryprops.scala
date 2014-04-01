@@ -13,7 +13,7 @@ import org.scalacheck.Gen._
 import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary._
 
-object HullSpecification extends Properties("ConvexHull") {
+object HullSpecification extends Properties("ConvexHull") with GeometryPrimitives {
   implicit def genCoords(): Gen[Coordinates] = for {
     lat <- Gen.choose(42.827055, 43.196613)
     lon <- Gen.choose(-90.220861, -89.44301)
@@ -26,7 +26,7 @@ object HullSpecification extends Properties("ConvexHull") {
     hull.length == hull.toSet.size
   }
 
-  property("outputPointsSubsetInputPoitms") = forAll { (points: List[Coordinates]) =>
+  property("outputPointsSubsetInputPoints") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
     hull.toSet.diff(points.toSet).size == 0
   }
@@ -34,5 +34,15 @@ object HullSpecification extends Properties("ConvexHull") {
   property("doesntIncreasePointCount") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
     hull.length <= points.length
+  }
+  
+  property("hullIsConvex") = forAll { (points: List[Coordinates]) =>
+    val hull = ConvexHull.calculate(points)
+    if (hull.length > 3) {
+      val hullPoly = hull ++ List(hull.head)
+      (hullPoly sliding 3).forall {case List(a, b, c) => !clockwise(a,b,c)} 
+    } else {
+      true
+    }
   }
 }

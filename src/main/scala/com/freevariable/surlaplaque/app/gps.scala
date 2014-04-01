@@ -66,7 +66,7 @@ object GPSClusterApp extends Common {
       Map(
         "type" -> "Feature".toJson,
         "geometry" -> Map("type"->"Polygon".toJson, "coordinates"->Array((acoords ++ Array(acoords(0))).toJson).toJson).toJson,
-        "properties" -> Map("fill"->rgb((cluster*2).toByte, 0, 0), "stroke-width"->"0").toJson
+        "properties" -> Map("fill"->rgb((cluster*2).toByte, 0, 0)/*, "stroke-width"->"0"*/).toJson
       )
     }
 
