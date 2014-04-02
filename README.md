@@ -17,4 +17,4 @@ By default, the map will go into a file in the current directory called `slp.jso
 *  `SLP_MASTER` defines the Spark master to use (defaults to `local[8]`)
 *  `SLP_OUTPUT_FILE` defines the name of the output file for GeoJSON data (defaults to `slp.json`)
 
-There are other applications here too but they're subject to change.  More documentation is forthcoming.
+There are other applications here too but their interfaces and functionality are rather more subject to change.  More documentation is forthcoming.
