@@ -1,6 +1,6 @@
 sur-la-plaque
 =============
 
-experiments with analytics for cycling data.
+This repository contains some experiments with analytics for cycling data.
 
-ideas include power zone histograms, linear regression on MMP vs various factors, etc
+See [this blog post](http://chapeau.freevariable.com/2014/04/fitness-data-visualization-with-apache-spark.html) for some background.
