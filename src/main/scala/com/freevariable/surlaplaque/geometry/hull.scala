@@ -19,7 +19,7 @@
 
 package com.freevariable.surlaplaque.geometry
 
-import com.freevariable.surlaplaque.data.{Coordinates, Trackpoint}
+import com.freevariable.surlaplaque.data.Coordinates
 
 object ConvexHull extends GeometryPrimitives {
   def calculate(points: List[Coordinates]): List[Coordinates] = {

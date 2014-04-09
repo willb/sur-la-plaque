@@ -19,7 +19,7 @@
 
 package com.freevariable.surlaplaque.geometry
 
-import com.freevariable.surlaplaque.data.{Coordinates, Trackpoint}
+import com.freevariable.surlaplaque.data.Coordinates
 
 trait GeometryPrimitives {
   // TODO:  add some more basic primitives here to enable pushing more of
