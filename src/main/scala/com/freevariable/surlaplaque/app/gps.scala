@@ -35,7 +35,7 @@ object GPSClusterApp extends Common with ActivitySliding {
   import org.apache.spark.rdd.RDD
   import org.apache.spark.SparkConf
     
-  import com.freevariable.surlaplaque.util.ConvexHull
+  import com.freevariable.surlaplaque.geometry.ConvexHull
     
   def main(args: Array[String]) {
     val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "60").toInt
