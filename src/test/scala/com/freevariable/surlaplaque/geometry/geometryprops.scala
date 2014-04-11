@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package com.freevariable.surlaplaque.util
+package com.freevariable.surlaplaque.geometry
 
 import com.freevariable.surlaplaque.data.Coordinates
 
@@ -42,24 +42,32 @@ object HullSpecification extends Properties("ConvexHull") with GeometryPrimitive
 
   property("hullPointsAreUnique") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
-    hull.length == hull.toSet.size
+    hull.points.length == hull.points.toSet.size
   }
 
   property("outputPointsSubsetInputPoints") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
-    hull.toSet.diff(points.toSet).size == 0
+    hull.points.toSet.diff(points.toSet).size == 0
   }
 
   property("doesntIncreasePointCount") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
-    hull.length <= points.length
+    hull.points.length <= points.length
   }
   
   property("hullIsConvex") = forAll { (points: List[Coordinates]) =>
     val hull = ConvexHull.calculate(points)
-    if (hull.length > 3) {
-      val hullPoly = hull ++ List(hull.head)
-      (hullPoly sliding 3).forall {case List(a, b, c) => !clockwise(a,b,c)} 
+    if (hull.points.length > 3) {
+      hull.isCCW
+    } else {
+      true
+    }
+  }
+  
+  property("hullContainsAllPoints") = forAll { (points: List[Coordinates]) =>
+    val hull = ConvexHull.calculate(points)
+    if (hull.points.length > 3) {
+      points.forall(p => hull.includesPoint(p))
     } else {
       true
     }

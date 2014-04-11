@@ -68,7 +68,7 @@ object GPSClusterApp extends Common with ActivitySliding {
 
     val colorer = makeColorer(data, mmpPeriod, model)
     
-    val hullPolys = hulls.map({case (cluster, coords) => makeHullPoly(cluster, coords, colorer)}).collect
+    val hullPolys = hulls.map({case (cluster, poly) => makeHullPoly(cluster, poly.points, colorer)}).collect
     
     val struct = Map("type"->"FeatureCollection".toJson, "features"->hullPolys.toJson)
         

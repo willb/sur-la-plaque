@@ -22,16 +22,16 @@ package com.freevariable.surlaplaque.geometry
 import com.freevariable.surlaplaque.data.Coordinates
 
 object ConvexHull extends GeometryPrimitives {
-  def calculate(points: List[Coordinates]): List[Coordinates] = {
+  def calculate(points: List[Coordinates]): Polygon = {
     val sortedPoints = points.sorted.distinct
     
     if (sortedPoints.length <= 2) {
-      sortedPoints
+      new Polygon(sortedPoints)
     } else {
       val lowerHull = buildHull(sortedPoints, List())
       val upperHull = buildHull(sortedPoints.reverse, List())
       
-      (lowerHull ++ upperHull).distinct
+      new Polygon((lowerHull ++ upperHull).distinct)
     }
   }
     
