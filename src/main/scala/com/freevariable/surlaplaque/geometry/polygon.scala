@@ -23,7 +23,7 @@ import com.freevariable.surlaplaque.data.Coordinates
 
 sealed case class Polygon(points: List[Coordinates]) extends GeometryPrimitives {
   lazy val closedPoints =
-    this.points.last::this.points
+    this.points ++ List(this.points.head)
 
   lazy val isCW = 
     (closedPoints sliding 3).forall {case List(a:Coordinates, b:Coordinates, c:Coordinates) => clockwise(a,b,c)}
@@ -35,22 +35,26 @@ sealed case class Polygon(points: List[Coordinates]) extends GeometryPrimitives 
       calculate whether or not p is in this polygon via the winding number method; adapted from http://geomalgorithms.com/a03-_inclusion.html
     */
   def includesPoint(p: Coordinates) = {
-    def cccross(o:Coordinates,a:Coordinates,b:Coordinates) =
-      ccross(csub(a,o), csub(b,o))
     
-    def ipHelper(p: Coordinates, poly: List[List[Coordinates]], wn: Int): Int = poly match {
+    def windingNum(p: Coordinates, poly: List[List[Coordinates]], wn: Int): Int = poly match {
       case List(v1, v2)::ps => 
-        if (v1.lat <= p.lat && v2.lat > p.lat && cccross(v1, v2, p) > 0) {
-          ipHelper(p, ps, wn + 1)
-        } else if (v2.lat <= p.lat && cccross(v1, v2, p) < 0) {
-          ipHelper(p, ps, wn - 1)
+        if (v1.lon <= p.lon && v2.lon > p.lon && isLeft(v1, v2, p) > 0) {
+          // Console.println(s"incrementing wn (was $wn)")
+          windingNum(p, ps, wn + 1)
+        } else if (!(v1.lon <= p.lon) && v2.lon <= p.lon && isLeft(v1, v2, p) < 0) {
+          // Console.println(s"decrementing wn (was $wn)")
+          windingNum(p, ps, wn - 1)
         } else {
-          ipHelper(p, ps, wn)
+          // Console.println(s"not changing wn (was $wn)")
+          windingNum(p, ps, wn)
         }
       case Nil => wn
     }
     
-    ipHelper(p, (closedPoints sliding 2).toList, 0) != 0
+    val wn = windingNum(p, (closedPoints sliding 2).toList, 0) 
+
+    // Console.println(s"wn is $wn")
+    wn != 0
   }
   
   val length = points.length

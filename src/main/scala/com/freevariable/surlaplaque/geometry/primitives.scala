@@ -33,4 +33,7 @@ trait GeometryPrimitives {
   
   def clockwise(o:Coordinates,a:Coordinates,b:Coordinates) =
     ccross(csub(a,o), csub(b,o)) <= 0
+  
+  def isLeft(p0:Coordinates, p1:Coordinates, p2:Coordinates) =
+    (p1.lat - p0.lat) * (p2.lon - p0.lon) - (p2.lat - p0.lat) * (p1.lon - p0.lon)
 }
