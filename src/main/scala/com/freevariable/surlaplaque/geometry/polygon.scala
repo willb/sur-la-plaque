@@ -74,8 +74,8 @@ object Polygon {
   implicit def poly2json(p: Polygon): JValue = {
     ("type" -> "Feature") ~
     ("geometry" -> 
-      ("type" -> "polygon") ~
-      ("coordinates" -> p.closedPoints.map {coords => List(coords.lon, coords.lat)})) ~
+      ("type" -> "Polygon") ~
+      ("coordinates" -> List(p.closedPoints.map {coords => List(coords.lon, coords.lat)}))) ~
     ("properties" -> p.properties)
   }
 }
