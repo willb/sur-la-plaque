@@ -21,7 +21,9 @@ package com.freevariable.surlaplaque.geometry
 
 import com.freevariable.surlaplaque.data.Coordinates
 
-sealed case class Polygon(points: List[Coordinates]) extends GeometryPrimitives {
+import scala.language.implicitConversions
+
+sealed case class Polygon(points: List[Coordinates], properties: Map[String, String] = Map()) extends GeometryPrimitives {
   lazy val closedPoints =
     this.points ++ List(this.points.head)
 
@@ -58,4 +60,22 @@ sealed case class Polygon(points: List[Coordinates]) extends GeometryPrimitives 
   }
   
   val length = points.length
+  
+  def annotate(k: String, v: String): Polygon =
+    Polygon(this.points, this.properties + Pair(k, v))
+  
+}
+
+object Polygon {
+  import org.json4s._
+  import org.json4s.JsonDSL._
+  import org.json4s.jackson.JsonMethods._
+  
+  implicit def poly2json(p: Polygon): JValue = {
+    ("type" -> "Feature") ~
+    ("geometry" -> 
+      ("type" -> "polygon") ~
+      ("coordinates" -> p.closedPoints.map {coords => List(coords.lon, coords.lat)})) ~
+    ("properties" -> p.properties)
+  }
 }
