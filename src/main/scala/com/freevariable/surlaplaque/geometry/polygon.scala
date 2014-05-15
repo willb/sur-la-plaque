@@ -23,7 +23,7 @@ import com.freevariable.surlaplaque.data.Coordinates
 
 import scala.language.implicitConversions
 
-sealed case class Polygon(points: List[Coordinates], properties: Map[String, String] = Map()) extends GeometryPrimitives {
+sealed case class Polygon(points: List[Coordinates], properties: Map[String, String] = Map()) extends GeometryPrimitives with Annotatable[Polygon] {
   lazy val closedPoints =
     this.points ++ List(this.points.head)
 
