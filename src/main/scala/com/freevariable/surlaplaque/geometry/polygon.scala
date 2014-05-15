@@ -33,6 +33,9 @@ sealed case class Polygon(points: List[Coordinates], properties: Map[String, Str
   lazy val isCCW =
     (closedPoints sliding 3).forall {case List(a:Coordinates, b:Coordinates, c:Coordinates) => !clockwise(a,b,c)}
   
+  lazy val pointSet =
+    this.points.toSet
+  
     /**
       calculate whether or not p is in this polygon via the winding number method; adapted from http://geomalgorithms.com/a03-_inclusion.html
     */
@@ -53,10 +56,7 @@ sealed case class Polygon(points: List[Coordinates], properties: Map[String, Str
       case Nil => wn
     }
     
-    val wn = windingNum(p, (closedPoints sliding 2).toList, 0) 
-
-    // Console.println(s"wn is $wn")
-    wn != 0
+    pointSet.contains(p) || windingNum(p, (closedPoints sliding 2).toList, 0) != 0
   }
   
   val length = points.length
