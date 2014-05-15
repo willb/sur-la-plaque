@@ -20,6 +20,9 @@
 package com.freevariable.surlaplaque.geometry
 
 trait GenericAnnotatable[T,K,V] {
+  type AnnotationKey = K
+  type AnnotationValue = V
+  
   def annotate(k: K, v: V): T
 }
 

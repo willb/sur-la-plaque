@@ -61,7 +61,7 @@ sealed case class Polygon(points: List[Coordinates], properties: Map[String, Str
   
   val length = points.length
   
-  def annotate(k: String, v: String): Polygon =
+  def annotate(k: AnnotationKey, v: AnnotationValue): Polygon =
     Polygon(this.points, this.properties + Pair(k, v))
   
 }
