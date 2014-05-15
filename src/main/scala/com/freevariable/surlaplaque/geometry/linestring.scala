@@ -32,6 +32,18 @@ sealed case class LineString(points: List[Coordinates], properties: Map[String, 
   def annotate(k: AnnotationKey, v: AnnotationValue): LineString =
     LineString(this.points, this.properties + Pair(k, v))
   
+  def decimate(factor: Int) = {
+    def dhelper(pts: List[Coordinates], count: Int): List[Coordinates] = 
+      (pts, count) match {
+        case (Nil, _) => Nil
+        case (hd::tl, _) if (count % factor == 0) => hd::dhelper(tl, count + 1)
+        case (_::tl, _) => dhelper(tl, count + 1)
+      }
+    
+    val newPoints = dhelper(this.points, 0)
+    
+    LineString(newPoints, this.properties)
+  }
 }
 
 object LineString {
@@ -43,7 +55,7 @@ object LineString {
     ("type" -> "Feature") ~
     ("geometry" -> 
       ("type" -> "LineString") ~
-      ("coordinates" -> List(p.points.map {coords => List(coords.lon, coords.lat)}))) ~
+      ("coordinates" -> p.points.map {coords => List(coords.lon, coords.lat)})) ~
     ("properties" -> p.properties)
   }
 }
