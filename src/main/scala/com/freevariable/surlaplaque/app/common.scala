@@ -22,6 +22,7 @@ package com.freevariable.surlaplaque.app;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
+import scala.collection.IterableLike
 
 object SLP {
     import java.io.File
