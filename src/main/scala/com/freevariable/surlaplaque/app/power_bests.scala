@@ -29,10 +29,15 @@ import com.freevariable.surlaplaque.data._
 import com.freevariable.surlaplaque.app._
 
 object PowerBestsApp extends Common with ActivitySliding {
+  import org.json4s._
+  import org.json4s.JsonDSL._
+  import org.json4s.jackson.JsonMethods._
+
   import org.apache.spark.rdd.RDD
   import org.apache.spark.SparkConf
     
-  import com.freevariable.surlaplaque.geometry.ConvexHull
+  import com.freevariable.surlaplaque.geometry.LineString
+  import com.freevariable.surlaplaque.geometry.LineString._  
 
   class PBOptions(periodColors: Map[Int, Triple[Byte,Byte,Byte]], clusters: Int, iterations: Int, fls: List[String]) {
     def periodMap = {
@@ -66,6 +71,7 @@ object PowerBestsApp extends Common with ActivitySliding {
 
     def phelper(params: List[String], options: PBOptions): PBOptions = {
       params match {
+        case Nil => options
         case dirPattern(dir) :: rest => phelper(rest, options.withFiles(SLP.listFilesInDir(dir)))
         case "--activity-dir" :: dir :: rest => phelper(rest, options.withFiles(SLP.listFilesInDir(dir)))
         case "--period-coloring" :: period :: hexRGB(r,g,b) :: rest => {
@@ -79,7 +85,6 @@ object PowerBestsApp extends Common with ActivitySliding {
         case "--" :: rest => options.withFiles(rest)
         case bogusOpt if bogusOpt(0) == "-" => throw new RuntimeException(s"unrecognized option $bogusOpt")
         case file :: rest => phelper(rest, options.withFile(file))
-        case Nil => options
       }
     }
     phelper(args.toList, PBOptions.default)
@@ -91,12 +96,10 @@ object PowerBestsApp extends Common with ActivitySliding {
     
     val out = outputFile
     
-    // out.println(struct.toJson)
+    out.println(pretty(render(struct)))
     
     out.close
   }
-  
-  // val mmps = windowsForActivities(data, mmpPeriod).map {case ((a,i),s) => {val ll = s.head.latlong; (Array(ll.lon, ll.lat), s.map(_.watts).reduce(_ + _) / s.size)}}
   
   def run(args: Array[String]) = {
     val conf = new SparkConf()
@@ -108,11 +111,23 @@ object PowerBestsApp extends Common with ActivitySliding {
     
     val options = parseArgs(args)
     
-    val data = app.processFiles(options.files.toArray)
+    val data = app.processFiles(options.files)
     
-    val struct = Map("type"->"FeatureCollection", "features"->List())
+    val bests = options.periodMap.flatMap { case(period, color) =>
+      bestsForPeriod(data, period, app).collect.map {case (_, samples) => LineString(samples.map(_.latlong))}
+    }
+    
+    val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
     
     struct
+  }
+  
+  def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP) = {
+    val windowedSamples = windowsForActivities(data, period).cache
+    val mmps = windowedSamples.map {case ((activity, offset), samples) => (samples.map(_.watts).reduce(_ + _) / samples.size, (activity, offset))}
+    val top50 = app.context.parallelize(mmps.sortByKey(false).map {case (watts, (activity, offset)) => ((activity, offset), watts)}.take(50)).cache
+    
+    top50.join(windowedSamples).map {case ((activity, offset), (watts, samples)) => (watts, samples)}
   }
   
   def rgba(r: Byte, g: Byte, b: Byte, a: Byte) = s"rgba($r, $g, $b, $a)"
