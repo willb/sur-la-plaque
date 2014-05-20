@@ -22,8 +22,6 @@ package com.freevariable.surlaplaque.app;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
-import scala.collection.IterableLike
-
 object SLP {
     import java.io.File
     def listFilesInDir(dirname: String): List[String] = {
@@ -46,10 +44,10 @@ class SLP(sc: SparkContext) {
     import com.freevariable.surlaplaque.importer.extract
     import com.freevariable.surlaplaque.power.MMP
     
-    def processFiles(files: Array[String]) = 
+    def processFiles(files: Seq[String]) = 
         sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))
 
-    def processFiles(files: Array[String], period: Int) = 
+    def processFiles(files: Seq[String], period: Int) = 
         sc.parallelize(files.flatMap((s:String) => MMP.calculate(extract.trackpointDataFromFile(s).toList, period)))
         
     def context = sc
