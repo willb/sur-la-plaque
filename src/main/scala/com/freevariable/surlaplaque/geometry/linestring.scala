@@ -23,7 +23,7 @@ import com.freevariable.surlaplaque.data.Coordinates
 
 import scala.language.implicitConversions
 
-sealed case class LineString(points: List[Coordinates], properties: Map[String, String] = Map()) extends Annotatable[LineString] {
+sealed case class LineString(points: Seq[Coordinates], properties: Map[String, String] = Map()) extends Annotatable[LineString] {
   lazy val pointSet =
     this.points.toSet
   
@@ -40,7 +40,7 @@ sealed case class LineString(points: List[Coordinates], properties: Map[String, 
         case (_::tl, _) => dhelper(tl, count + 1)
       }
     
-    val newPoints = dhelper(this.points, 0)
+    val newPoints = dhelper(this.points.toList, 0)
     
     LineString(newPoints, this.properties)
   }
