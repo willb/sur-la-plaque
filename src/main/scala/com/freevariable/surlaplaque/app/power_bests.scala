@@ -39,18 +39,20 @@ object PowerBestsApp extends Common with ActivitySliding {
   import com.freevariable.surlaplaque.geometry.LineString
   import com.freevariable.surlaplaque.geometry.LineString._  
 
-  class PBOptions(periodColors: Map[Int, Triple[Byte,Byte,Byte]], clusters: Int, iterations: Int, fls: List[String]) {
+  import scala.collection.immutable.TreeSet
+
+  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], clusters: Int, iterations: Int, fls: List[String]) {
     def periodMap = {
       if (periodColors.size == 0) 
-        Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple(255,0,0))
+        Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
       else 
         periodColors
     }
     
     val files = this.fls
     
-    def withPeriodColoring(period: Int, r: Byte, g: Byte, b: Byte) =
-      new PBOptions(this.periodColors + Pair(period, Triple(r,g,b)), this.clusters, this.iterations, this.files)
+    def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) =
+      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files)
     
     def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files)
 
@@ -75,10 +77,10 @@ object PowerBestsApp extends Common with ActivitySliding {
         case dirPattern(dir) :: rest => phelper(rest, options.withFiles(SLP.listFilesInDir(dir)))
         case "--activity-dir" :: dir :: rest => phelper(rest, options.withFiles(SLP.listFilesInDir(dir)))
         case "--period-coloring" :: period :: hexRGB(r,g,b) :: rest => {
-          val rb = Integer.parseInt(r, 16).toByte
-          val gb = Integer.parseInt(g, 16).toByte
-          val bb = Integer.parseInt(b, 16).toByte
-          phelper(rest, options.withPeriodColoring(period.toInt, rb, gb, bb))
+          val rb = Integer.parseInt(r, 16) % 256
+          val gb = Integer.parseInt(g, 16) % 256 
+          val bb = Integer.parseInt(b, 16) % 256
+          phelper(rest, options.withPeriodColoring(period.toInt, rb.toShort, gb.toShort, bb.toShort))
         }
         case "--clusters" :: c :: rest => phelper(rest, options.withClusters(c.toInt))
         case "--iterations" :: it :: rest => phelper(rest, options.withIterations(it.toInt))
@@ -113,8 +115,8 @@ object PowerBestsApp extends Common with ActivitySliding {
     
     val data = app.processFiles(options.files)
     
-    val bests = options.periodMap.flatMap { case(period, color) =>
-      bestsForPeriod(data, period, app).collect.map {case (_, samples) => LineString(samples.map(_.latlong))}
+    val bests = options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+      bestsForPeriod(data, period, app).collect.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
     }
     
     val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
@@ -125,10 +127,43 @@ object PowerBestsApp extends Common with ActivitySliding {
   def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP) = {
     val windowedSamples = windowsForActivities(data, period).cache
     val mmps = windowedSamples.map {case ((activity, offset), samples) => (samples.map(_.watts).reduce(_ + _) / samples.size, (activity, offset))}
-    val top50 = app.context.parallelize(mmps.sortByKey(false).map {case (watts, (activity, offset)) => ((activity, offset), watts)}.take(50)).cache
+    val sorted = mmps.sortByKey(false).map {case (watts, (activity, offset)) => ((activity, offset), watts)}.take(1000)
+
+    val trimmed = topWithoutOverlaps(period, 50, sorted.toList)
     
+    Console.println("!!! TRIMMED " + trimmed.length + "\n " + trimmed + "\n!!!TRIMMED")
+
+    val top50 = app.context.parallelize(trimmed).cache
+
     top50.join(windowedSamples).map {case ((activity, offset), (watts, samples)) => (watts, samples)}
   }
   
-  def rgba(r: Byte, g: Byte, b: Byte, a: Byte) = s"rgba($r, $g, $b, $a)"
+  import Math.abs
+  
+  type AO = Pair[String, Int]
+  type AOWatts = Pair[AO, Double]
+  
+  def topWithoutOverlaps(period: Int, count: Int, candidates: List[AOWatts]) = {
+    def thelper(activityPeriods: TreeSet[AO], 
+      kept: List[AOWatts], 
+      cs: List[AOWatts]): List[AOWatts] = {
+    if (kept.length == count) {
+      kept
+    } else {
+      cs match {
+        case Nil => kept
+        case first @ Pair(Pair(activity, offset), watts) :: rest => 
+          if (activityPeriods.filter({case (a,o) => a == activity && abs(o - offset) < period}).size == 0) {
+            thelper(activityPeriods + Pair(activity, offset), Pair(Pair(activity, offset), watts)::kept, rest)
+          } else {
+            thelper(activityPeriods, kept, rest)
+          }
+        }
+      }
+    }
+    
+    thelper(TreeSet[AO](), List[AOWatts](), candidates).reverse
+  }
+  
+  def rgba(r: Short, g: Short, b: Short, a: Short) = s"rgba($r, $g, $b, $a)"
 }
