@@ -115,14 +115,14 @@ object PowerBestsApp extends Common with ActivitySliding {
     
     val data = app.processFiles(options.files)
     
-    val bests = bestsWithoutTemporalOverlap(options.periodMap, data, app)
+    val bests = bestsWithoutTemporalOverlap(options, data, app)
         
     val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
     
     struct
   }
   
-  def bestsWithoutTemporalOverlap(periodMap: Map[Int, Triple[Short,Short,Short]], data: RDD[Trackpoint], app: SLP) = {
+  def bestsWithoutTemporalOverlap(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP) = {
       val windowedSamples = windowsForActivities(data, period).cache
       val mmps = windowedSamples.map {case ((activity, offset), samples) => (samples.map(_.watts).reduce(_ + _) / samples.size, (activity, offset))}
@@ -137,7 +137,7 @@ object PowerBestsApp extends Common with ActivitySliding {
       top50.join(windowedSamples).map {case ((activity, offset), (watts, samples)) => (watts, samples)}
     }
   
-    periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
       bestsForPeriod(data, period, app).collect.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
     }
   }

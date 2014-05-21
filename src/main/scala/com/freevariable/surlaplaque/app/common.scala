@@ -89,3 +89,21 @@ trait ActivitySliding {
     pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s)}})
   }
 }
+
+trait PointClustering {
+  import org.apache.spark.rdd.RDD
+  import org.apache.spark.mllib.clustering._
+
+  import com.freevariable.surlaplaque.data.Trackpoint
+  
+  def clusterPoints(rdd: RDD[Trackpoint], numClusters: Int, numIterations: Int) = {
+    val km = new KMeans()
+    km.setK(numClusters)
+    km.setMaxIterations(numIterations)
+    
+    val vecs = rdd.map(tp => Array(tp.latlong.lon, tp.latlong.lat)).cache()
+    km.run(vecs)
+  }
+  
+  def closestCenter(tp: Trackpoint, model: KMeansModel) = model.predict(Array(tp.latlong.lon, tp.latlong.lat))
+}

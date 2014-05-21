@@ -29,7 +29,7 @@ import com.freevariable.surlaplaque.data._
 // import com.freevariable.surlaplaque.power._
 import com.freevariable.surlaplaque.app._
 
-object GPSClusterApp extends Common with ActivitySliding {
+object GPSClusterApp extends Common with ActivitySliding with PointClustering {
   import spray.json._
   import DefaultJsonProtocol._
   import org.apache.spark.rdd.RDD
@@ -121,18 +121,9 @@ object GPSClusterApp extends Common with ActivitySliding {
     
     colorer
   }
-
-  def clusterPoints(rdd: RDD[Trackpoint], numClusters: Int, numIterations: Int) = {
-    val km = new KMeans()
-    km.setK(numClusters)
-    km.setMaxIterations(numIterations)
-    
-    val vecs = rdd.map(tp => Array(tp.latlong.lon, tp.latlong.lat)).cache()
-    km.run(vecs)
-  }
-
+  
   def generateHulls(rdd: RDD[Trackpoint], model: KMeansModel) = {
-    val clusteredPoints = rdd.groupBy((tp:Trackpoint) => model.predict(Array(tp.latlong.lon, tp.latlong.lat)))
+    val clusteredPoints = rdd.groupBy((tp:Trackpoint) => closestCenter(tp, model))
     clusteredPoints.map({case (ctr, pts) => (ctr, ConvexHull.calculate(pts.map(_.latlong).toList))})
   }
 
