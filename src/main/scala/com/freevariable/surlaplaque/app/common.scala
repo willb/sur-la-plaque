@@ -86,7 +86,7 @@ trait ActivitySliding {
   
   def windowsForActivities(data: RDD[Trackpoint], period: Int) = {
     val pairs = data.groupBy((tp:Trackpoint) => tp.activity.getOrElse("UNKNOWN"))
-    pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s.toArray)}})
+    pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s)}})
   }
 }
 
