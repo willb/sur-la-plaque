@@ -28,7 +28,7 @@ import com.freevariable.surlaplaque.importer._
 import com.freevariable.surlaplaque.data._
 import com.freevariable.surlaplaque.app._
 
-object PowerBestsApp extends Common with ActivitySliding {
+object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   import org.json4s._
   import org.json4s.JsonDSL._
   import org.json4s.jackson.JsonMethods._
@@ -41,15 +41,13 @@ object PowerBestsApp extends Common with ActivitySliding {
 
   import scala.collection.immutable.TreeSet
 
-  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], clusters: Int, iterations: Int, fls: List[String]) {
+  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String]) {
     def periodMap = {
       if (periodColors.size == 0) 
         Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
       else 
         periodColors
     }
-    
-    val files = this.fls
     
     def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) =
       new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files)
@@ -64,7 +62,7 @@ object PowerBestsApp extends Common with ActivitySliding {
   }
   
   object PBOptions {
-    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "128").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List())
+    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "256").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List())
   }
   
   def parseArgs(args: Array[String]) = {
@@ -115,31 +113,11 @@ object PowerBestsApp extends Common with ActivitySliding {
     
     val data = app.processFiles(options.files)
     
-    val bests = bestsWithoutTemporalOverlap(options, data, app)
+    val bests = bestsByEndpointClusters(options, data, app)
         
     val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
     
     struct
-  }
-  
-  def bestsWithoutTemporalOverlap(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
-    def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP) = {
-      val windowedSamples = windowsForActivities(data, period).cache
-      val mmps = windowedSamples.map {case ((activity, offset), samples) => (samples.map(_.watts).reduce(_ + _) / samples.size, (activity, offset))}
-      val sorted = mmps.sortByKey(false).map {case (watts, (activity, offset)) => ((activity, offset), watts)}.take(1000)
-
-      val trimmed = topWithoutOverlaps(period, 50, sorted.toList)
-    
-      Console.println("!!! TRIMMED " + trimmed.length + "\n " + trimmed + "\n!!!TRIMMED")
-
-      val top50 = app.context.parallelize(trimmed).cache
-
-      top50.join(windowedSamples).map {case ((activity, offset), (watts, samples)) => (watts, samples)}
-    }
-  
-    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
-      bestsForPeriod(data, period, app).collect.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
-    }
   }
   
   import Math.abs
@@ -147,26 +125,70 @@ object PowerBestsApp extends Common with ActivitySliding {
   type AO = Pair[String, Int]
   type AOWatts = Pair[AO, Double]
   
-  def topWithoutOverlaps(period: Int, count: Int, candidates: List[AOWatts]) = {
-    def thelper(activityPeriods: TreeSet[AO], 
-      kept: List[AOWatts], 
-      cs: List[AOWatts]): List[AOWatts] = {
-    if (kept.length == count) {
-      kept
-    } else {
-      cs match {
-        case Nil => kept
-        case first @ Pair(Pair(activity, offset), watts) :: rest => 
-          if (activityPeriods.filter({case (a,o) => a == activity && abs(o - offset) < period}).size == 0) {
-            thelper(activityPeriods + Pair(activity, offset), Pair(Pair(activity, offset), watts)::kept, rest)
-          } else {
-            thelper(activityPeriods, kept, rest)
+  def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
+    val model = clusterPoints(data, options.clusters, options.iterations)
+    def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: KMeansModel) = {
+      val windowedSamples = windowsForActivities(data, period).cache
+      val clusterPairs = windowedSamples
+        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head, model), closestCenter(samples.last, model)))}
+      val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
+      val bestsPerClusterPair = mmps
+        .join(clusterPairs)
+        .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
+        .reduceByKey((a, b) => if (a._1 > b._1) a else b)
+      val top20 = bestsPerClusterPair
+        .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => (watts, (activity, offset))}
+        .sortByKey(false)
+        .map {case (watts, (activity, offset)) => ((activity, offset), watts)}
+        .join(windowedSamples)
+        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
+        .take(20)
+      top20
+    }
+    
+    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+      bestsForPeriod(data, period, app, model).map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
+    }
+  }
+  
+  def bestsWithoutTemporalOverlap(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
+    def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP) = {
+      val windowedSamples = windowsForActivities(data, period).cache
+      val mmps = windowedSamples.map {case ((activity, offset), samples) => (samples.map(_.watts).reduce(_ + _) / samples.size, (activity, offset))}
+      val sorted = mmps.sortByKey(false).map {case (watts, (activity, offset)) => ((activity, offset), watts)}.take(1000) // FIXME: KLUDGE
+
+      val trimmed = topWithoutOverlaps(period, 20, sorted.toList)
+
+      val top20 = app.context.parallelize(trimmed).cache
+
+      top20.join(windowedSamples).map {case ((activity, offset), (watts, samples)) => (watts, samples)}
+    }
+  
+    def topWithoutOverlaps(period: Int, count: Int, candidates: List[AOWatts]) = {
+      def thelper(activityPeriods: TreeSet[AO], 
+        kept: List[AOWatts], 
+        cs: List[AOWatts]): List[AOWatts] = {
+      if (kept.length == count) {
+        kept
+      } else {
+        cs match {
+          case Nil => kept
+          case first @ Pair(Pair(activity, offset), watts) :: rest => 
+            if (activityPeriods.filter({case (a,o) => a == activity && abs(o - offset) < period}).size == 0) {
+              thelper(activityPeriods + Pair(activity, offset), Pair(Pair(activity, offset), watts)::kept, rest)
+            } else {
+              thelper(activityPeriods, kept, rest)
+            }
           }
         }
       }
+    
+      thelper(TreeSet[AO](), List[AOWatts](), candidates).reverse
     }
     
-    thelper(TreeSet[AO](), List[AOWatts](), candidates).reverse
+    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+      bestsForPeriod(data, period, app).collect.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
+    }
   }
   
   def rgba(r: Short, g: Short, b: Short, a: Short) = s"rgba($r, $g, $b, $a)"
