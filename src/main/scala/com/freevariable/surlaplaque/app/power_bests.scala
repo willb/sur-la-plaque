@@ -136,18 +136,18 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         .join(clusterPairs)
         .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
         .reduceByKey((a, b) => if (a._1 > b._1) a else b)
-      val top20 = bestsPerClusterPair
-        .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => (watts, (activity, offset))}
-        .sortByKey(false)
-        .map {case (watts, (activity, offset)) => ((activity, offset), watts)}
+      bestsPerClusterPair
+        .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => ((activity, offset), watts)}
         .join(windowedSamples)
         .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
+        .sortByKey(false)
         .take(20)
-      top20
     }
     
     options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
-      bestsForPeriod(data, period, app, model).map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
+      val bests = bestsForPeriod(data, period, app, model)
+      val best = bests.head._1
+      bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (255 * (watts / best)).toShort), "stroke-width" -> "4", "label" -> s"$watts watts"))}
     }
   }
   
