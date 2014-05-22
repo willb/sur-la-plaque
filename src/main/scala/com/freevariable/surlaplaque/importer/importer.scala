@@ -21,6 +21,7 @@ package com.freevariable.surlaplaque.importer;
 
 import com.freevariable.surlaplaque.data._
 
+import scala.util.{Try, Success}
 import scala.xml.XML
 
 import org.json4s.JsonDSL._
@@ -47,7 +48,12 @@ object extract {
     
     def trackpointDataFromFile(tcx: String) = {
         val tcxTree = XML.loadFile(tcx)
-        (tcxTree \\ "Trackpoint").map(extract.tupleFromTrackpoint(_, Some(tcx)))
+        // (tcxTree \\ "Trackpoint").map(x => Try(extract.tupleFromTrackpoint(x, Some(tcx)))). {case Success(_) => true}.map (_.get)
+        val (successes, failures) = (tcxTree \\ "Trackpoint").map(x => Try(extract.tupleFromTrackpoint(x, Some(tcx)))).partition(_.isSuccess)
+        if (failures.size > 0) {
+          Console.println("warning: encountered " + failures.size + s" failures processing file $tcx")
+        }
+        for (tp <- successes) yield tp.get
     }
 }
 
