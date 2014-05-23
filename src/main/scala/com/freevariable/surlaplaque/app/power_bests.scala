@@ -139,20 +139,25 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head, model), closestCenter(samples.last, model)))}
       val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
 
-      mmps.join(clusterPairs)
-        .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
-        .reduceByKey((a, b) => if (a._1 > b._1) a else b)
-        .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => ((activity, offset), watts)}
-        .join(windowedSamples)
-        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
-        .sortByKey(false)
-        .take(20)
+      val top20 = mmps.join(clusterPairs)
+       .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
+       .reduceByKey ((a, b) => if (a._1 > b._1) a else b)
+       .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => ((activity, offset), watts)}
+       .sortByKey(false)
+       .take(20)
+        
+      app.context.parallelize(top20)
+       .join (windowedSamples)
+       .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
+       .sortByKey(false)
+       .collect
+        
     }
     
     options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
       val bests = bestsForPeriod(data, period, app, model)
       val best = bests.head._1
-      bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (options.defaultOpacity * (watts / best)).toShort), "stroke-width" -> "4", "label" -> s"$watts watts"))}
+      bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (options.defaultOpacity * (watts / best)).toShort), "stroke-width" -> "7", "label" -> s"$watts watts"))}
     }
   }
   
