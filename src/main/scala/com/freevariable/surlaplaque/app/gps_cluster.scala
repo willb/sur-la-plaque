@@ -42,7 +42,7 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
       
     val struct = run(args, mmpPeriod, makeMmpColorer _)
     
-    val out = outputFile
+    val out = outputFile()
     
     out.println(struct.toJson)
     

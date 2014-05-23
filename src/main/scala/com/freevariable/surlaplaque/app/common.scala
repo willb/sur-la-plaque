@@ -68,10 +68,14 @@ trait Common {
         case None => 300
     }
     
-    def outputFile = sys.env.get("SLP_OUTPUT_FILE") match {
-        case Some("--") => new PrintWriter(System.err)
-        case Some(filename) => new PrintWriter(new File(filename))
-        case None => new PrintWriter(new File("slp.json"))
+    def outputFileName = sys.env.get("SLP_OUTPUT_FILE") match {
+        case Some(filename) => filename
+        case None => "slp.json"
+    }
+    
+    def outputFile(f: String = "") = (if (f == "") outputFileName else f) match {
+        case "--" => new PrintWriter(System.err)
+        case filename => new PrintWriter(new File(filename))
     }
     
     def getEnvValue(variable:String, default:String) = sys.env.get(variable) match {

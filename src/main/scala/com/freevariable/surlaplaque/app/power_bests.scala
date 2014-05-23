@@ -41,7 +41,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
 
   import scala.collection.immutable.TreeSet
 
-  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String]) {
+  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String) {
     def periodMap = {
       if (periodColors.size == 0) 
         Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
@@ -50,19 +50,24 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     }
     
     def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) =
-      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files)
+      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile)
     
-    def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files)
+    def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile)
 
-    def withIterations(iterations: Int) = new PBOptions(this.periodColors, this.clusters, iterations, this.files)
+    def withIterations(iterations: Int) = new PBOptions(this.periodColors, this.clusters, iterations, this.files, this.defaultOpacity, this.outputFile)
     
-    def withFile(file: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, file::this.files)
+    def withFile(file: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, file::this.files, this.defaultOpacity, this.outputFile)
 
-    def withFiles(fs: List[String]) = new PBOptions(this.periodColors, this.clusters, this.iterations, fs ++ this.files)
+    def withFiles(fs: List[String]) = new PBOptions(this.periodColors, this.clusters, this.iterations, fs ++ this.files, this.defaultOpacity, this.outputFile)
+    
+    def withDefaultOpacity(op: Short) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, op, this.outputFile)
+    
+    def withOutputFile(f: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, f)
+    
   }
   
   object PBOptions {
-    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "256").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List())
+    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "256").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List(), 128, getEnvValue("SLP_OUTPUT_FILE", "slp.json"))
   }
   
   def parseArgs(args: Array[String]) = {
@@ -82,6 +87,8 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         }
         case "--clusters" :: c :: rest => phelper(rest, options.withClusters(c.toInt))
         case "--iterations" :: it :: rest => phelper(rest, options.withIterations(it.toInt))
+        case "--opacity" :: op :: rest => phelper(rest, options.withDefaultOpacity(op.toShort))
+        case "--output-file" :: f :: rest => phelper(rest, options.withOutputFile(f))
         case "--" :: rest => options.withFiles(rest)
         case bogusOpt if bogusOpt(0) == "-" => throw new RuntimeException(s"unrecognized option $bogusOpt")
         case file :: rest => phelper(rest, options.withFile(file))
@@ -92,24 +99,23 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
 
   
   def main(args: Array[String]) {
-    val struct = run(args)
+    val options = parseArgs(args)
+    val struct = run(options)
     
-    val out = outputFile
+    val out = outputFile(options.outputFile)
     
     out.println(pretty(render(struct)))
     
     out.close
   }
   
-  def run(args: Array[String]) = {
+  def run(options: PBOptions) = {
     val conf = new SparkConf()
                  .setMaster(master)
                  .setAppName(appName)
                  .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     val app = new SLP(new SparkContext(conf))
-    
-    val options = parseArgs(args)
     
     val data = app.processFiles(options.files)
     
@@ -146,7 +152,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
       val bests = bestsForPeriod(data, period, app, model)
       val best = bests.head._1
-      bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (255 * (watts / best)).toShort), "stroke-width" -> "4", "label" -> s"$watts watts"))}
+      bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (options.defaultOpacity * (watts / best)).toShort), "stroke-width" -> "4", "label" -> s"$watts watts"))}
     }
   }
   
