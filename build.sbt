@@ -2,9 +2,9 @@ name := "slp"
 
 version := "0.0.1"
 
-scalaVersion := "2.10.3"
+scalaVersion := "2.10.4"
 
-sbtVersion := "0.13.1"
+sbtVersion := "0.13.2"
 
 ideaExcludeFolders += ".idea"
 
@@ -39,3 +39,5 @@ scalacOptions ++= Seq("-feature")
 libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"
 )
+
+scalacOptions += "-Yrepl-sync"
