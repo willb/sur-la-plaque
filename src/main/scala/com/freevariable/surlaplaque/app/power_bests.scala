@@ -142,11 +142,12 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
       val top20 = mmps.join(clusterPairs)
        .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
        .reduceByKey ((a, b) => if (a._1 > b._1) a else b)
-       .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => ((activity, offset), watts)}
+       .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => (watts, (activity, offset))}
        .sortByKey(false)
        .take(20)
         
       app.context.parallelize(top20)
+       .map {case (watts, (activity, offset)) => ((activity, offset), watts)} 
        .join (windowedSamples)
        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
        .sortByKey(false)
