@@ -17,35 +17,21 @@
  * limitations under the License.
  */
 
-package com.freevariable.surlaplaque.util
+package com.freevariable.surlaplaque.geometry
 
-import com.freevariable.surlaplaque.data.{Coordinates, Trackpoint}
-
-trait GeometryPrimitives {
-  // TODO:  add some more basic primitives here to enable pushing more of
-  // convex hull creation out to RDD-land
-  
-  def csub(a:Coordinates,b:Coordinates) = 
-    Coordinates(a.lat - b.lat, a.lon - b.lon)
-  
-  def ccross(a:Coordinates,b:Coordinates) = 
-    a.lat * b.lon - b.lat * a.lon
-  
-  def clockwise(o:Coordinates,a:Coordinates,b:Coordinates) =
-    ccross(csub(a,o), csub(b,o)) <= 0
-}
+import com.freevariable.surlaplaque.data.Coordinates
 
 object ConvexHull extends GeometryPrimitives {
-  def calculate(points: List[Coordinates]): List[Coordinates] = {
+  def calculate(points: List[Coordinates]): Polygon = {
     val sortedPoints = points.sorted.distinct
     
     if (sortedPoints.length <= 2) {
-      sortedPoints
+      new Polygon(sortedPoints)
     } else {
       val lowerHull = buildHull(sortedPoints, List())
       val upperHull = buildHull(sortedPoints.reverse, List())
       
-      (lowerHull ++ upperHull).distinct
+      new Polygon((lowerHull ++ upperHull).distinct)
     }
   }
     

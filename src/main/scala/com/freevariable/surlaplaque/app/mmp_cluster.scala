@@ -51,7 +51,7 @@ object MMPClusterApp extends Common {
         
         val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
         
-        val out = outputFile
+        val out = outputFile()
         
         labeledVectors.countByKey.foreach (kv => out.println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1)(0),kv._2)))
         

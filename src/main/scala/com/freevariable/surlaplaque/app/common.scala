@@ -22,7 +22,6 @@ package com.freevariable.surlaplaque.app;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
-
 object SLP {
     import java.io.File
     def listFilesInDir(dirname: String): List[String] = {
@@ -45,10 +44,10 @@ class SLP(sc: SparkContext) {
     import com.freevariable.surlaplaque.importer.extract
     import com.freevariable.surlaplaque.power.MMP
     
-    def processFiles(files: Array[String]) = 
+    def processFiles(files: Seq[String]) = 
         sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))
 
-    def processFiles(files: Array[String], period: Int) = 
+    def processFiles(files: Seq[String], period: Int) = 
         sc.parallelize(files.flatMap((s:String) => MMP.calculate(extract.trackpointDataFromFile(s).toList, period)))
         
     def context = sc
@@ -69,10 +68,14 @@ trait Common {
         case None => 300
     }
     
-    def outputFile = sys.env.get("SLP_OUTPUT_FILE") match {
-        case Some("--") => new PrintWriter(System.err)
-        case Some(filename) => new PrintWriter(new File(filename))
-        case None => new PrintWriter(new File("slp.json"))
+    def outputFileName = sys.env.get("SLP_OUTPUT_FILE") match {
+        case Some(filename) => filename
+        case None => "slp.json"
+    }
+    
+    def outputFile(f: String = "") = (if (f == "") outputFileName else f) match {
+        case "--" => new PrintWriter(System.err)
+        case filename => new PrintWriter(new File(filename))
     }
     
     def getEnvValue(variable:String, default:String) = sys.env.get(variable) match {
@@ -89,4 +92,22 @@ trait ActivitySliding {
     val pairs = data.groupBy((tp:Trackpoint) => tp.activity.getOrElse("UNKNOWN"))
     pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s)}})
   }
+}
+
+trait PointClustering {
+  import org.apache.spark.rdd.RDD
+  import org.apache.spark.mllib.clustering._
+
+  import com.freevariable.surlaplaque.data.Trackpoint
+  
+  def clusterPoints(rdd: RDD[Trackpoint], numClusters: Int, numIterations: Int) = {
+    val km = new KMeans()
+    km.setK(numClusters)
+    km.setMaxIterations(numIterations)
+    
+    val vecs = rdd.map(tp => Array(tp.latlong.lon, tp.latlong.lat)).cache()
+    km.run(vecs)
+  }
+  
+  def closestCenter(tp: Trackpoint, model: KMeansModel) = model.predict(Array(tp.latlong.lon, tp.latlong.lat))
 }
