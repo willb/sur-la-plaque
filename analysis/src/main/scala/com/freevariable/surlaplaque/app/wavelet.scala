@@ -32,6 +32,7 @@ object WaveletClusterApp extends Common {
     import com.freevariable.surlaplaque.wavelets._
     import com.freevariable.surlaplaque.power.NP
     import org.apache.spark.SparkConf
+    import org.apache.spark.mllib.linalg.{Vector, Vectors}
     
     val OFFSET = 30
     val KEEP = 0.15
@@ -76,14 +77,14 @@ object WaveletClusterApp extends Common {
         })
     }
     
-    def findClusters(awpairs: RDD[((String, Int), Array[Double])]) = {
+    def findClusters(awpairs: RDD[((String, Int), Vector)]) = {
         val numClusters = getEnvValue("SLP_WAVELET_CLUSTERS", "24").toInt
         val numIterations = getEnvValue("SLP_ITERATIONS", "50").toInt
 
         val km = new KMeans()
         km.setK(numClusters)
         km.setMaxIterations(numIterations)
-        km.run(awpairs.map((tup) => {val (_,darr) = tup ; darr}).cache)
+        km.run(awpairs.map((tup) => {val (_,dvec) = tup ; dvec}).cache)
     }
     
     def runClustering(args: Array[String]) = {

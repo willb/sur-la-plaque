@@ -97,6 +97,7 @@ trait ActivitySliding {
 trait PointClustering {
   import org.apache.spark.rdd.RDD
   import org.apache.spark.mllib.clustering._
+  import org.apache.spark.mllib.linalg.Vectors
 
   import com.freevariable.surlaplaque.data.Trackpoint
   
@@ -105,9 +106,9 @@ trait PointClustering {
     km.setK(numClusters)
     km.setMaxIterations(numIterations)
     
-    val vecs = rdd.map(tp => Array(tp.latlong.lon, tp.latlong.lat)).cache()
+    val vecs = rdd.map(tp => Vectors.dense(Array(tp.latlong.lon, tp.latlong.lat))).cache()
     km.run(vecs)
   }
   
-  def closestCenter(tp: Trackpoint, model: KMeansModel) = model.predict(Array(tp.latlong.lon, tp.latlong.lat))
+  def closestCenter(tp: Trackpoint, model: KMeansModel) = model.predict(Vectors.dense(Array(tp.latlong.lon, tp.latlong.lat)))
 }
