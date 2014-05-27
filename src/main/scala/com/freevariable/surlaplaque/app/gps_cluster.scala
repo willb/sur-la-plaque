@@ -34,9 +34,10 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
   import DefaultJsonProtocol._
   import org.apache.spark.rdd.RDD
   import org.apache.spark.SparkConf
-    
+  import org.apache.spark.mllib.linalg.{Vector, Vectors}
+  
   import com.freevariable.surlaplaque.geometry.ConvexHull
-    
+  
   def main(args: Array[String]) {
     val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "60").toInt
       
@@ -76,10 +77,10 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
   }
 
   def makeMmpColorer(data: RDD[Trackpoint], mmpPeriod: Int, model: KMeansModel) = {
-    val mmps = windowsForActivities(data, mmpPeriod).map {case ((a,i),s) => {val ll = s.head.latlong; (Array(ll.lon, ll.lat), s.map(_.watts).reduce(_ + _) / s.size)}}
+    val mmps = windowsForActivities(data, mmpPeriod).map {case ((a,i),s) => {val ll = s.head.latlong; (Vectors.dense(Array(ll.lon, ll.lat)), s.map(_.watts).reduce(_ + _) / s.size)}}
     
     val bestPerCluster = mmps
-      .map({case (ll:Array[Double], mmp:Double) => {val cluster = model.predict(ll); (cluster, mmp)}})
+      .map({case (ll:Vector, mmp:Double) => {val cluster = model.predict(ll); (cluster, mmp)}})
       .reduceByKey((a:Double, b:Double) => if (a>b) a else b)
       .collectAsMap()
     
@@ -101,7 +102,7 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
   def makeDensityColorer(data: RDD[Trackpoint], mmpPeriod: Int, model: KMeansModel) = {
     // NB: "density" is a misnomer since this colors based on counts and not on count per unit of area
     // the latter will follow after some refactoring
-    val clusterDensities = data.map((tp:Trackpoint) => (model.predict(Array(tp.latlong.lon, tp.latlong.lat)), 1))
+    val clusterDensities = data.map((tp:Trackpoint) => (model.predict(Vectors.dense(Array(tp.latlong.lon, tp.latlong.lat))), 1))
       .reduceByKey(_ + _)
       .collectAsMap()
     

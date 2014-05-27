@@ -13,8 +13,8 @@ ideaExcludeFolders += ".idea_modules"
 resolvers += "Akka Repo" at "http://repo.akka.io/repository"
 
 libraryDependencies ++= Seq(
-    "org.apache.spark" % "spark-core_2.10" % "0.9.0-incubating",
-    "org.apache.spark" % "spark-mllib_2.10" % "0.9.0-incubating"
+    "org.apache.spark" % "spark-core_2.10" % "1.0.0",
+    "org.apache.spark" % "spark-mllib_2.10" % "1.0.0"
 )
 
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "0.6.0"
@@ -27,7 +27,8 @@ libraryDependencies += "org.json4s" %%  "json4s-jackson" % "3.2.6"
 
 resolvers ++= Seq(
             "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-            "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
+            "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+            "Spark 1.0rc11 repository" at "https://repository.apache.org/content/repositories/orgapachespark-1019/"
 )
 
 libraryDependencies += "org.scalanlp" %% "breeze" % "0.6"
