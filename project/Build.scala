@@ -1,10 +1,16 @@
 import sbt._
 import Keys._
+import org.scalatra.sbt._
+import org.scalatra.sbt.PluginKeys._
+import com.mojolly.scalate.ScalatePlugin._
+import ScalateKeys._
 
 object SLPBuild  extends Build {
   val SLP_VERSION = "0.0.2"
   
   lazy val analysis = project settings(analysisSettings : _*)
+
+  lazy val viewer = project settings(viewerSettings : _*)
   
   def baseSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.freevariable.surlaplaque",
@@ -48,7 +54,33 @@ object SLPBuild  extends Build {
     )
   )
   
+  def scalatraSettings = ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ Seq(
+    libraryDependencies ++= Seq(
+      "org.scalatra" %% "scalatra" % scalatraVersion,
+      "org.scalatra" %% "scalatra-scalate" % scalatraVersion,
+      "org.scalatra" %% "scalatra-specs2" % scalatraVersion % "test",
+      "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
+      "org.eclipse.jetty" % "jetty-webapp" % "8.1.8.v20121106" % "container",
+      "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar"))
+    ),
+    scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
+      Seq(
+        TemplateConfig(
+          base / "webapp" / "WEB-INF" / "templates",
+          Seq.empty,  /* default imports should be added here */
+          Seq(
+            Binding("context", "_root_.org.scalatra.scalate.ScalatraRenderContext", importMembers = true, isImplicit = true)
+          ),  /* add extra bindings here */
+          Some("templates")
+        )
+      )
+    }
+  )
+  
   def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ testSettings
   
+  def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
+  
   val sparkVersion = "1.0.0"
+  val scalatraVersion = "2.2.2"
 }
