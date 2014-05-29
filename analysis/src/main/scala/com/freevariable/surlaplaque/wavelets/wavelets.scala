@@ -8,6 +8,8 @@ class WaveletExtractor(windowSize: Int, skip: Int, keepRatio: Double) extends Se
     import collection.SortedSet
     import math.{max,min}
     
+    import org.apache.spark.mllib.linalg.{Vector, Vectors}
+    
     private def waveletize(samples: Array[Double]) = haarTr(DenseVector(samples)).toArray
     
     /* zeroes out the coefficients with the lowest magnitude; always keeps at least one */
@@ -16,7 +18,7 @@ class WaveletExtractor(windowSize: Int, skip: Int, keepRatio: Double) extends Se
         val sorted = collection.SortedSet(samples.toArray :_*)
         val minMag = (sorted.takeRight(keepCount) | sorted.take(keepCount)).map(math.abs(_)).takeRight(keepCount).min
         
-        samples.map((smp) => if (math.abs(smp) < minMag) 0.0 else smp)
+        Vectors.dense(samples.map((smp) => if (math.abs(smp) < minMag) 0.0 else smp))
     }
 
     def transformAndAbstract(samples: Array[Double]) = 

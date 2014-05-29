@@ -31,6 +31,7 @@ import com.freevariable.surlaplaque.app._
 
 object MMPClusterApp extends Common {
     import com.freevariable.surlaplaque.power.MMPTrackpoint
+    import org.apache.spark.mllib.linalg.{Vector=>SparkVector, Vectors}
     
     def main(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
@@ -42,18 +43,18 @@ object MMPClusterApp extends Common {
                 
         val data = app.processFiles(SLP.expandArgs(args), mmpPeriod)
 
-        val vectors = data.map((mtp:MMPTrackpoint) => Array(mtp.mmp)).cache()
+        val vectors = data.map((mtp:MMPTrackpoint) => Vectors.dense(Array(mtp.mmp))).cache()
         val km = new KMeans()
         km.setK(numClusters)
         km.setMaxIterations(numIterations)
         
         val model = km.run(vectors)
         
-        val labeledVectors = vectors.map((arr:Array[Double]) => (model.predict(arr), arr))
+        val labeledVectors = vectors.map((arr:SparkVector) => (model.predict(arr), arr))
         
         val out = outputFile()
         
-        labeledVectors.countByKey.foreach (kv => out.println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1)(0),kv._2)))
+        labeledVectors.countByKey.foreach (kv => out.println("cluster %d (center %f) has %d members".format(kv._1,model.clusterCenters(kv._1).toArray(0),kv._2)))
         
         out.close
     }
