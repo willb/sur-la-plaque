@@ -21,8 +21,7 @@ object SLPBuild  extends Build {
     libraryDependencies ++= Seq(
         "com.github.nscala-time" %% "nscala-time" % "0.6.0",
         "io.spray" %%  "spray-json" % "1.2.5",
-        "org.json4s" %%  "json4s-jackson" % "3.2.6",
-        "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"
+        "org.json4s" %%  "json4s-jackson" % "3.2.6"
     ),
     scalacOptions ++= Seq("-feature", "-Yrepl-sync")
   )
@@ -40,7 +39,13 @@ object SLPBuild  extends Build {
     )
   )
   
-  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings
+  def testSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"
+    )
+  )
+  
+  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ testSettings
   
   val sparkVersion = "0.9.1"
 }
