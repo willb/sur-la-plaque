@@ -29,7 +29,7 @@ object SLPBuild  extends Build {
         "io.spray" %%  "spray-json" % "1.2.5",
         "org.json4s" %%  "json4s-jackson" % "3.2.6"
     ),
-    scalacOptions ++= Seq("-feature", "-Yrepl-sync")
+    scalacOptions ++= Seq("-feature", "-Yrepl-sync", "-target:jvm-1.7")
   )
   
   def sparkSettings = Seq(
