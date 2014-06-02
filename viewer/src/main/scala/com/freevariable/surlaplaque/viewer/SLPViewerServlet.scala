@@ -28,8 +28,8 @@ class SLPViewerServlet(system:ActorSystem, myActor:ActorRef) extends SlpViewerSt
   }
   
   get("/cache/:id") {
-    val future = myActor ? Pair(Symbol("GET"), params("id").toInt)
-    Await.result(future, Duration(100, "millis")).toString
+    val future = myActor ? MAPGET(params("id").toInt)
+    Await.result(future, Duration(10000, "millis")).toString
   }
   
 }
