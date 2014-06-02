@@ -55,10 +55,14 @@ object SLPBuild  extends Build {
   )
   
   def scalatraSettings = ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ Seq(
+    resolvers += "Scalate snapshots" at "https://repository.jboss.org/nexus/content/repositories/fs-snapshots/",
     libraryDependencies ++= Seq(
       "org.scalatra" %% "scalatra" % scalatraVersion,
       "org.scalatra" %% "scalatra-scalate" % scalatraVersion,
       "org.scalatra" %% "scalatra-specs2" % scalatraVersion % "test",
+      "org.fusesource.scalate" %% "scalate-core" % scalateVersion,
+      "org.fusesource.scalate" %% "scalate-project" % scalateVersion,
+      "org.fusesource.scalate" %% "scalate-util" % scalateVersion,
       "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
       "org.eclipse.jetty" % "jetty-webapp" % "8.1.8.v20121106" % "container",
       "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar"))
@@ -83,4 +87,5 @@ object SLPBuild  extends Build {
   
   val sparkVersion = "1.0.0"
   val scalatraVersion = "2.2.2"
+  val scalateVersion = "1.7.0-SNAPSHOT"
 }
