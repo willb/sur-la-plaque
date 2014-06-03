@@ -4,19 +4,23 @@ import akka.actor.{ActorRef, Actor, ActorSystem}
 
 case object EntryNotFound
 
-sealed abstract class MapCommand
-case class MAPGET(val k: Int) extends MapCommand
-case class MAPPUT(val k: Int, val v: Any) extends MapCommand
+sealed abstract class CacheCommand
+case class GetCommand(val k: String) extends CacheCommand
+case class PutCommand(val k: String, val v: String) extends CacheCommand
 
-class MapActor extends Actor {
-  val PUT = Symbol("put")
-  val GET = Symbol("get")
-  
-  private var cache = Map[Int, Any](1 -> "foo")
+sealed abstract class Document(val v: Any)
+case class GenericDocument(doc: Any) extends Document(doc)
+case class GeoDocument(doc: Any) extends Document(doc)
+case class ScatterPlotDocument(doc: Any) extends Document(doc)
+
+class DocumentCache extends Actor {
+  private var cache = Map[String, String]("example" -> "foo")
   
   def receive = {
-    case MAPPUT(k:Int, v:Any) => cache = cache + Pair(k, v)
-    case MAPGET(k:Int) => sender ! cache.getOrElse(k, EntryNotFound).toString
+    case PutCommand(k:String, v:String) => {
+      cache = cache + Pair(k, v)
+    }
+    case GetCommand(k:String) => sender ! cache.getOrElse(k, EntryNotFound).toString
     case x => sender ! s"$x IS NOT RECOGNIZED BUT THE DUDE ABIDES"
   }
 }

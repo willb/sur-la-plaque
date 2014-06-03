@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 
 import scala.concurrent.duration._
 
-class SLPViewerServlet(system:ActorSystem, myActor:ActorRef) extends SlpViewerStack with FutureSupport {
+class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStack with FutureSupport {
 
   protected implicit def executor: ExecutionContext = system.dispatcher
 
@@ -28,8 +28,13 @@ class SLPViewerServlet(system:ActorSystem, myActor:ActorRef) extends SlpViewerSt
   }
   
   get("/cache/:id") {
-    val future = myActor ? MAPGET(params("id").toInt)
-    Await.result(future, Duration(10000, "millis")).toString
+    val future = cache ? GetCommand(params("id").toString)
+    Await.result(future, Duration(100, "millis")).toString
   }
   
+  put("/cache/:id") {
+    val key = params("id").toString
+    val value = request.body
+    cache ! PutCommand(params("id").toString, request.body)
+  }
 }
