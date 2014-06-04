@@ -20,16 +20,16 @@ class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStac
 
   get("/") {
     <html>
-      <body>
-        <h1>Hello, world!</h1>
-        Say <a href="hello-scalate">hello to Scalate</a>.
-      </body>
     </html>
   }
   
   get("/cache/:id") {
     val future = cache ? GetCommand(params("id").toString)
-    Await.result(future, Duration(100, "millis")).toString
+    val result = Await.result(future, Duration(100, "millis"))
+    result match {
+      case GenericDocument(doc) => Ok(doc)
+      case MissingDocument => halt(404)
+    }
   }
   
   put("/cache/:id") {
