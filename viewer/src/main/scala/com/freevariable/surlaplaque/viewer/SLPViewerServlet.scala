@@ -24,11 +24,12 @@ class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStac
   }
   
   get("/cache/:id") {
-    val future = cache ? GetCommand(params("id").toString)
+    val key = params("id").toString
+    val future = cache ? GetCommand(key)
     val result = Await.result(future, Duration(100, "millis"))
     result match {
       case GenericDocument(doc) => Ok(doc)
-      case MissingDocument => halt(404)
+      case MissingDocument => NotFound(s"couldn't find $key")
     }
   }
   
