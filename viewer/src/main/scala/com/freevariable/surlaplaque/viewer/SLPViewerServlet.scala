@@ -36,6 +36,6 @@ class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStac
   put("/cache/:id") {
     val key = params("id").toString
     val value = request.body
-    cache ! PutCommand(params("id").toString, request.body)
+    cache ! PutCommand(params("id").toString, GenericDocument(request.body))
   }
 }

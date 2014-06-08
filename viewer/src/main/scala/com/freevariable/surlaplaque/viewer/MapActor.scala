@@ -6,7 +6,7 @@ case object EntryNotFound
 
 sealed abstract class CacheCommand
 case class GetCommand(val k: String) extends CacheCommand
-case class PutCommand(val k: String, val v: String) extends CacheCommand
+case class PutCommand(val k: String, val v: Document) extends CacheCommand
 
 sealed abstract class Document(val v: Any)
 case class GenericDocument(doc: Any) extends Document(doc)
@@ -15,16 +15,16 @@ case class ScatterPlotDocument(doc: Any) extends Document(doc)
 case object MissingDocument extends Document(Nil)
 
 class DocumentCache extends Actor {
-  private var cache = Map[String, String]("example" -> "foo")
+  private var cache = Map[String, Document]("example" -> GenericDocument("foo"))
   
   def receive = {
-    case PutCommand(k:String, v:String) => {
+    case PutCommand(k:String, v:Document) => {
       cache = cache + Pair(k, v)
     }
     case GetCommand(k:String) => {
       val cached = cache.get(k)
       sender ! (cached match {
-        case Some(doc) => GenericDocument(doc)
+        case Some(doc) => doc
         case None => MissingDocument
       })
     }
