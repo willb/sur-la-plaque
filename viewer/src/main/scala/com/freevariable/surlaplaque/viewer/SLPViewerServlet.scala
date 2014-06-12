@@ -28,7 +28,23 @@ class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStac
     val future = cache ? GetCommand(key)
     val result = Await.result(future, Duration(100, "millis"))
     result match {
-      case GenericDocument(doc) => Ok(doc)
+      case GenericDocument(doc) => {
+        contentType = "application/json"
+        Ok(doc)
+      }
+      case MissingDocument => NotFound(s"couldn't find $key")
+    }
+  }
+  
+  get("/view-map/:id") {
+    val key = params("id").toString
+    val future = cache ? GetCommand(key)
+    val result = Await.result(future, Duration(100, "millis"))
+    result match {
+      case GenericDocument(doc) => {
+        contentType = "text/html"
+        jade("map", "key" -> key)
+      }
       case MissingDocument => NotFound(s"couldn't find $key")
     }
   }
