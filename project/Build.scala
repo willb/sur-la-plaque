@@ -54,6 +54,11 @@ object SLPBuild  extends Build {
     )
   )
   
+  def dispatchSettings = Seq(
+    libraryDependencies += 
+      "net.databinder.dispatch" %% "dispatch-core" % "0.11.1"
+  )
+  
   def scalatraSettings = ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ Seq(
     resolvers += "Scalate snapshots" at "https://repository.jboss.org/nexus/content/repositories/fs-snapshots/",
     libraryDependencies ++= Seq(
@@ -81,7 +86,7 @@ object SLPBuild  extends Build {
     }
   )
   
-  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ testSettings
+  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ dispatchSettings ++ testSettings
   
   def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
   
