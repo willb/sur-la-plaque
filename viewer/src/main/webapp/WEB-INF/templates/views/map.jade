@@ -58,8 +58,10 @@ div{:id=>'map', :style=>'width: 960px; height: 540px'}
     
     // initialize the path data 
     d3_features.attr("d", path)
-     .style("fill-opacity", 0.7)
-     .attr('fill','blue');
+      .style("stroke-opacity", 0.7)
+      .style("stroke-width", 7)
+      .style("stroke", "blue")
+      .attr('fill','none');
    } 
    
    // Use Leaflet to implement a D3 geometric transformation.
