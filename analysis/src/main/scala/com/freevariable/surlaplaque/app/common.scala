@@ -88,10 +88,12 @@ trait ActivitySliding {
   import org.apache.spark.rdd.RDD
   import com.freevariable.surlaplaque.data.Trackpoint
   
-  def windowsForActivities(data: RDD[Trackpoint], period: Int) = {
+  def windowsForActivities[U](data: RDD[Trackpoint], period: Int, xform: (Trackpoint => U) = identity _) = {
     val pairs = data.groupBy((tp:Trackpoint) => tp.activity.getOrElse("UNKNOWN"))
-    pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s)}})
+    pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s.map(xform))}})
   }
+  
+  def identity(tp: Trackpoint) = tp
 }
 
 trait PointClustering {
@@ -100,6 +102,8 @@ trait PointClustering {
   import org.apache.spark.mllib.linalg.Vectors
 
   import com.freevariable.surlaplaque.data.Trackpoint
+  
+  import com.freevariable.surlaplaque.data.Coordinates
   
   def clusterPoints(rdd: RDD[Trackpoint], numClusters: Int, numIterations: Int) = {
     val km = new KMeans()
@@ -111,4 +115,7 @@ trait PointClustering {
   }
   
   def closestCenter(tp: Trackpoint, model: KMeansModel) = model.predict(Vectors.dense(Array(tp.latlong.lon, tp.latlong.lat)))
+  
+  def closestCenter(coords: Coordinates, model: KMeansModel) = model.predict(Vectors.dense(Array(coords.lon, coords.lat)))
+  
 }

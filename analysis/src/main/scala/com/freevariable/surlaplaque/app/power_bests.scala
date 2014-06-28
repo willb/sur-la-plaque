@@ -41,7 +41,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
 
   import scala.collection.immutable.TreeSet
 
-  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String) {
+  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String, val httpEndpoint: Option[String]) {
     def periodMap = {
       if (periodColors.size == 0) 
         Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
@@ -50,24 +50,25 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     }
     
     def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) =
-      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile)
+      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
     
-    def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile)
+    def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
 
-    def withIterations(iterations: Int) = new PBOptions(this.periodColors, this.clusters, iterations, this.files, this.defaultOpacity, this.outputFile)
+    def withIterations(iterations: Int) = new PBOptions(this.periodColors, this.clusters, iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
     
-    def withFile(file: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, file::this.files, this.defaultOpacity, this.outputFile)
+    def withFile(file: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, file::this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
 
-    def withFiles(fs: List[String]) = new PBOptions(this.periodColors, this.clusters, this.iterations, fs ++ this.files, this.defaultOpacity, this.outputFile)
+    def withFiles(fs: List[String]) = new PBOptions(this.periodColors, this.clusters, this.iterations, fs ++ this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
     
-    def withDefaultOpacity(op: Short) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, op, this.outputFile)
+    def withDefaultOpacity(op: Short) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, op, this.outputFile, httpEndpoint)
     
-    def withOutputFile(f: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, f)
+    def withOutputFile(f: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, f, httpEndpoint)
     
+    def withEndpoint(url: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, outputFile, Some(url))
   }
   
   object PBOptions {
-    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "256").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List(), 128, getEnvValue("SLP_OUTPUT_FILE", "slp.json"))
+    val default = new PBOptions(Map(), getEnvValue("SLP_CLUSTERS", "256").toInt, getEnvValue("SLP_ITERATIONS", "10").toInt, List(), 128, getEnvValue("SLP_OUTPUT_FILE", "slp.json"), None)
   }
   
   def parseArgs(args: Array[String]) = {
@@ -89,6 +90,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         case "--iterations" :: it :: rest => phelper(rest, options.withIterations(it.toInt))
         case "--opacity" :: op :: rest => phelper(rest, options.withDefaultOpacity(op.toShort))
         case "--output-file" :: f :: rest => phelper(rest, options.withOutputFile(f))
+        case "--url" :: url :: rest => phelper(rest, options.withEndpoint(url))
         case "--" :: rest => options.withFiles(rest)
         case bogusOpt if bogusOpt(0) == "-" => throw new RuntimeException(s"unrecognized option $bogusOpt")
         case file :: rest => phelper(rest, options.withFile(file))
@@ -104,7 +106,11 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     
     val out = outputFile(options.outputFile)
     
-    out.println(pretty(render(struct)))
+    val renderedStruct = pretty(render(struct))
+    
+    out.println(renderedStruct)
+    
+    maybePut(options, renderedStruct)
     
     out.close
   }
@@ -131,12 +137,16 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   type AO = Pair[String, Int]
   type AOWatts = Pair[AO, Double]
   
+  case class BasicTrackpoint(latlong: Coordinates, watts: Double) {}
+  
+  def stripTrackpoints(tp: Trackpoint) = BasicTrackpoint(tp.latlong, tp.watts)
+  
   def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
     val model = clusterPoints(data, options.clusters, options.iterations)
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: KMeansModel) = {
-      val windowedSamples = windowsForActivities(data, period).cache
+      val windowedSamples = windowsForActivities(data, period, stripTrackpoints _).cache
       val clusterPairs = windowedSamples
-        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head, model), closestCenter(samples.last, model)))}
+        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model), closestCenter(samples.last.latlong, model)))}
       val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
 
       val top20 = mmps.join(clusterPairs)
@@ -150,7 +160,6 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
        .map {case (watts, (activity, offset)) => ((activity, offset), watts)} 
        .join (windowedSamples)
        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
-       .sortByKey(false)
        .collect
         
     }
@@ -203,4 +212,19 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   }
   
   def rgba(r: Short, g: Short, b: Short, a: Short) = s"rgba($r, $g, $b, $a)"
+  
+  def maybePut(options: PBOptions, document: String) {
+    import dispatch._
+    import scala.concurrent.ExecutionContext.Implicits.global
+    
+    options.httpEndpoint match {
+      case Some(endpoint) => {
+        val request = url(endpoint).PUT
+          .setBody(document)
+          .addHeader("Content-type", "application/json")
+        for (result <- Http(request OK as.String)) yield result
+      }
+      case None => {}
+    }
+  }
 }
