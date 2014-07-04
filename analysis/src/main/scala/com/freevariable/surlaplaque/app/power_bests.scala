@@ -129,6 +129,8 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         
     val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
     
+    sys.addShutdownHook(app.stop)
+    
     struct
   }
   
