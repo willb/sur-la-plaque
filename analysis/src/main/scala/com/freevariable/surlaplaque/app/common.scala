@@ -45,11 +45,15 @@ class SLP(sc: SparkContext) {
     import com.freevariable.surlaplaque.power.MMP
     
     def processFiles(files: Seq[String]) = 
-        sc.parallelize(files.flatMap((s:String) => extract.trackpointDataFromFile(s)))
+        sc.parallelize(files, sc.defaultParallelism * 4).flatMap((s:String) => extract.trackpointDataFromFile(s))
 
     def processFiles(files: Seq[String], period: Int) = 
         sc.parallelize(files.flatMap((s:String) => MMP.calculate(extract.trackpointDataFromFile(s).toList, period)))
-        
+    
+    def stop {
+      sc.stop
+    }
+    
     def context = sc
 }
 
