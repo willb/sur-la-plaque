@@ -158,7 +158,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
        .sortByKey(false)
        .take(20)
         
-      app.context.parallelize(top20)
+      app.context.parallelize(top20, app.context.defaultParallelism * 4)
        .map {case (watts, (activity, offset)) => ((activity, offset), watts)} 
        .join (windowedSamples)
        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
