@@ -36,6 +36,7 @@ object MMPClusterApp extends Common {
     def appMain(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
+        addExitHook(app.stop)
         
         val numClusters = getEnvValue("SLP_CLUSTERS", "128").toInt
         val numIterations = getEnvValue("SLP_ITERATIONS", "20").toInt

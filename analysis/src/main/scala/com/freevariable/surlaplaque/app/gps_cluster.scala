@@ -57,6 +57,7 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
                  .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     val app = new SLP(new SparkContext(conf))
+    addExitHook(app.stop)
     
     val data = app.processFiles(SLP.expandArgs(args))
     

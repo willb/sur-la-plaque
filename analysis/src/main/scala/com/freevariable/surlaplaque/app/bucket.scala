@@ -34,6 +34,7 @@ object BucketApp extends Common {
     def appMain(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
+        addExitHook(app.stop)
         
         val data = app.processFiles(SLP.expandArgs(args))
         

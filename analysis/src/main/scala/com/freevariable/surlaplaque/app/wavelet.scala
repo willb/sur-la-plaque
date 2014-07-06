@@ -44,6 +44,7 @@ object WaveletClusterApp extends Common {
                      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
         val app = new SLP(new SparkContext(conf))
+        addExitHook(app.stop)
         
         val data = ReplHarness.setup(args, Some(app))
         
