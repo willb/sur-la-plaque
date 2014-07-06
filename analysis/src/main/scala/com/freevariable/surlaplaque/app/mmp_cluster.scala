@@ -33,7 +33,7 @@ object MMPClusterApp extends Common {
     import com.freevariable.surlaplaque.power.MMPTrackpoint
     import org.apache.spark.mllib.linalg.{Vector=>SparkVector, Vectors}
     
-    def main(args: Array[String]) {
+    def appMain(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         

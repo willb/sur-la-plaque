@@ -38,7 +38,7 @@ object GPSClusterApp extends Common with ActivitySliding with PointClustering {
   
   import com.freevariable.surlaplaque.geometry.ConvexHull
   
-  def main(args: Array[String]) {
+  def appMain(args: Array[String]) {
     val mmpPeriod = getEnvValue("SLP_MMP_PERIOD", "60").toInt
       
     val struct = run(args, mmpPeriod, makeMmpColorer _)

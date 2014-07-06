@@ -31,7 +31,7 @@ import com.freevariable.surlaplaque.app._
 
 object BucketApp extends Common {
     
-    def main(args: Array[String]) {
+    def appMain(args: Array[String]) {
         // XXX: add optional parameters here to support cluster execution
         val app = new SLP(new SparkContext(master, appName))
         

@@ -60,6 +60,8 @@ class SLP(sc: SparkContext) {
 trait Common {
     import java.io._
     
+    private var exitHooks: List[() => Unit] = Nil
+    
     def master = sys.env.get("SLP_MASTER") match {
         case Some(v) => v
         case None => "local[8]"
@@ -86,6 +88,23 @@ trait Common {
         case Some(v) => v
         case None => default
     }
+    
+    def main(args: Array[String]) = {
+      appMain(args)
+      runExitHooks
+    }
+    
+    def addExitHook(thunk: => Unit) {
+      exitHooks = {() => thunk} :: exitHooks
+    }
+    
+    def runExitHooks() {
+      for (hook <- exitHooks) {
+        hook()
+      }
+    }
+    
+    def appMain(args: Array[String])
 }
 
 trait ActivitySliding {

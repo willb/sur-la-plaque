@@ -108,7 +108,7 @@ object WaveletClusterApp extends Common {
         (aspairs, awpairs, model)
     }
     
-     def main(args: Array[String]) = {
+     def appMain(args: Array[String]) = {
          val (aspairs, awpairs, model) = runClustering(args)
          
          val calculate_np = NP.calculate _

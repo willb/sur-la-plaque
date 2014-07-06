@@ -100,7 +100,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   }
 
   
-  def main(args: Array[String]) {
+  def appMain(args: Array[String]) {
     val options = parseArgs(args)
     val struct = run(options)
     
@@ -122,14 +122,13 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
                  .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     val app = new SLP(new SparkContext(conf))
+    addExitHook(app.stop)
     
     val data = app.processFiles(options.files)
     
     val bests = bestsByEndpointClusters(options, data, app)
         
     val struct = ("type"->"FeatureCollection") ~ ("features"->bests)
-    
-    sys.addShutdownHook(app.stop)
     
     struct
   }

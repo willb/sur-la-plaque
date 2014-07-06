@@ -49,4 +49,6 @@ object ReplHarness extends Common {
         
         pairs.toMap
     }
+    
+    def appMain(args: Array[String]) {}
 }
