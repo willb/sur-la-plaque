@@ -49,22 +49,21 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
         periodColors
     }
     
-    def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) =
-      new PBOptions(this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)), this.clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
+    def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) = this.copy(periodColors = this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)))
     
-    def withClusters(clusters: Int) = new PBOptions(this.periodColors, clusters, this.iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
+    def withClusters(clusters: Int) = this.copy(clusters = clusters)
 
-    def withIterations(iterations: Int) = new PBOptions(this.periodColors, this.clusters, iterations, this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
+    def withIterations(iterations: Int) = this.copy(iterations = iterations)
     
-    def withFile(file: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, file::this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
+    def withFile(file: String) = this.copy(files = file::this.files)
 
-    def withFiles(fs: List[String]) = new PBOptions(this.periodColors, this.clusters, this.iterations, fs ++ this.files, this.defaultOpacity, this.outputFile, httpEndpoint)
+    def withFiles(fs: List[String]) = this.copy(files = fs ++ this.files) 
     
-    def withDefaultOpacity(op: Short) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, op, this.outputFile, httpEndpoint)
+    def withDefaultOpacity(op: Short) = this.copy(defaultOpacity = op)
     
-    def withOutputFile(f: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, f, httpEndpoint)
+    def withOutputFile(f: String) = this.copy(outputFile = f)
     
-    def withEndpoint(url: String) = new PBOptions(this.periodColors, this.clusters, this.iterations, this.files, this.defaultOpacity, outputFile, Some(url))
+    def withEndpoint(url: String) = this.copy(httpEndpoint = Some(url))
   }
   
   object PBOptions {
