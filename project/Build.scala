@@ -33,9 +33,6 @@ object SLPBuild  extends Build {
   )
   
   def sparkSettings = Seq(
-    resolvers ++= Seq (
-      "Spark 1.0rc11 repository" at "https://repository.apache.org/content/repositories/orgapachespark-1019/"
-    ),
     libraryDependencies ++= Seq(
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-mllib" % sparkVersion
@@ -90,7 +87,7 @@ object SLPBuild  extends Build {
   
   def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
   
-  val sparkVersion = "1.0.0"
+  val sparkVersion = "1.0.1"
   val scalatraVersion = "2.2.2"
   val scalateVersion = "1.7.0-SNAPSHOT"
 }
