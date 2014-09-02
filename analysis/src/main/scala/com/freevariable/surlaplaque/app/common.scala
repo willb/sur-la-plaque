@@ -26,7 +26,12 @@ object SLP {
     import java.io.File
     def listFilesInDir(dirname: String): List[String] = {
         val dir = new java.io.File(dirname)
-        dir.listFiles.filter(_.isFile).toList.map(dirname + "/" + _.getName.toString).filter(fn => fn.endsWith(".tcx"))
+	if (dir.exists && dir.isDirectory) {
+          dir.listFiles.filter(_.isFile).toList.map(dirname + "/" + _.getName.toString).filter(fn => fn.endsWith(".tcx"))
+	} else {
+	  println(s"warning:  $dirname either does not exist or is not a directory")
+	  Nil
+	}
     }
     
     def expandArgs(args: Array[String]): Array[String] = {
