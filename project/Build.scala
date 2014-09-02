@@ -49,6 +49,7 @@ object SLPBuild  extends Build {
   )
   
   def testSettings = Seq(
+    fork := true,
     libraryDependencies ++= Seq(
       "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"
     )

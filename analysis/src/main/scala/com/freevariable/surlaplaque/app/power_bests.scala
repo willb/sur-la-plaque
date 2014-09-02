@@ -41,7 +41,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
 
   import scala.collection.immutable.TreeSet
 
-  class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String, val httpEndpoint: Option[String]) {
+  case class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String, val httpEndpoint: Option[String]) {
     def periodMap = {
       if (periodColors.size == 0) 
         Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
