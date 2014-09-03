@@ -88,7 +88,22 @@ object SLPBuild  extends Build {
     }
   )
   
-  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ dispatchSettings ++ testSettings
+  def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ dispatchSettings ++ testSettings ++ Seq(
+    initialCommands in console :=
+      """
+        |import org.apache.spark.SparkConf
+        |import org.apache.spark.SparkContext
+        |import org.apache.spark.rdd.RDD
+        |import com.freevariable.surlaplaque.importer._
+        |import com.freevariable.surlaplaque.data._
+        |import com.freevariable.surlaplaque.app._
+        |val conf = new SparkConf().setMaster("local[8]").setAppName("console").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+        |val sc = new SparkContext(conf)
+        |val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+        |val app = new SLP(sc)
+        |import sqlContext._
+      """.stripMargin
+  )
   
   def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
   
