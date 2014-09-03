@@ -38,6 +38,7 @@ object SLPBuild  extends Build {
     ),
     libraryDependencies ++= Seq(
         "org.apache.spark" %% "spark-core" % sparkVersion,
+        "org.apache.spark" %% "spark-sql" % sparkVersion,
         "org.apache.spark" %% "spark-mllib" % sparkVersion
     )
   )
