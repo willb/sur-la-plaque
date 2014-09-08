@@ -148,14 +148,13 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: Broadcast[KMeansModel]) = {
       val windowedSamples = windowsForActivities(data, period, stripTrackpoints _)
 
-      val bests = windowedSamples.map {
-        case ((activity, offset), samples)  => (
-          (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)),
-          ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)
-        )
-      }.cache
+      val clusterPairs = windowedSamples
+        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)))}
+      val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
 
-      val top20 = bests.reduceByKey ((a, b) => if (a._2 > b._2) a else b)
+      val top20 = mmps.join(clusterPairs)
+       .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), ((activity, offset), watts))}
+       .reduceByKey ((a, b) => if (a._2 > b._2) a else b)
        .map { case ((_, _), keep) => keep }
        .takeOrdered(20)(Ordering.by[((String, Int), Double), Double] { case ((_, _), watts) => -watts})
         
