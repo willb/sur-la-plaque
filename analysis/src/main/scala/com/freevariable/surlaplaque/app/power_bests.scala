@@ -22,6 +22,8 @@ package com.freevariable.surlaplaque.app;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
+import org.apache.spark.broadcast.Broadcast
+
 import org.apache.spark.mllib.clustering._
 
 import com.freevariable.surlaplaque.importer._
@@ -142,11 +144,11 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   def stripTrackpoints(tp: Trackpoint) = BasicTrackpoint(tp.latlong, tp.watts)
   
   def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
-    val model = clusterPoints(data, options.clusters, options.iterations)
-    def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: KMeansModel) = {
+    val model = app.context.broadcast(clusterPoints(data, options.clusters, options.iterations))
+    def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: Broadcast[KMeansModel]) = {
       val windowedSamples = windowsForActivities(data, period, stripTrackpoints _).cache
       val clusterPairs = windowedSamples
-        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model), closestCenter(samples.last.latlong, model)))}
+        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)))}
       val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
 
       val top20 = mmps.join(clusterPairs)
