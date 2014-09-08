@@ -138,11 +138,22 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   type AOWatts = Pair[AO, Double]
   
   case class BasicTrackpoint(latlong: Coordinates, watts: Double) {}
+  case class LessBasicTrackpoint(activity: String, timestamp: Long, latlong: Coordinates, watts: Double) {}
+  
+  object LessBasicTrackpoint {
+    def from(tp: Trackpoint) = {
+      LessBasicTrackpoint(tp.activity.getOrElse("UNKNOWN"), tp.timestamp, tp.latlong, tp.watts)
+    }
+  }
+  
+  case class Effort(activity: String, start: Long, mmp: Double, clusters: Pair[Double, Double]) {}
   
   def stripTrackpoints(tp: Trackpoint) = BasicTrackpoint(tp.latlong, tp.watts)
   
   def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
     val model = clusterPoints(data, options.clusters, options.iterations)
+    val basicData = data.map { case tp:Trackpoint => LessBasicTrackpoint.from(tp) }
+
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: KMeansModel) = {
       val windowedSamples = windowsForActivities(data, period, stripTrackpoints _).cache
       val clusterPairs = windowedSamples
@@ -169,6 +180,39 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
       val best = bests.head._1
       bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (options.defaultOpacity * (watts / best)).toShort), "stroke-width" -> "7", "label" -> s"$watts watts"))}
     }
+  }
+  
+  def altBestsForPeriod(data: RDD[LessBasicTrackpoint], period: Int, app: SLP, model: KMeansModel) = {
+    val sqlContext = new org.apache.spark.sql.SQLContext(app.context)
+    import sqlContext._
+    
+    val startsTemp = s"startingPoints$period"
+    val mmpsTemp = s"mmps$period"
+    val minMaxesTemp = s"minMaxes$period"
+    
+    // XXX: lift this
+    data.registerAsTable("trackpoints")
+    cacheTable("trackpoints")
+    
+    sql(s"select activity, min(timestamp) as minTs, max(timestamp) - ${period * 1000L} as maxTs from trackpoints group by activity").registerAsTable(minMaxesTemp)
+    
+    sql(s"""select trackpoints.activity as activity, trackpoints.timestamp as start
+           from ${minMaxesTemp}, trackpoints 
+           where trackpoints.activity = ${minMaxesTemp}.activity and 
+                 trackpoints.timestamp <= maxTs and 
+                 trackpoints.timestamp >= minTs""").registerAsTable(startsTemp)
+    cacheTable(startsTemp)
+    
+    sql(s"""select ${startsTemp}.activity, ${startsTemp}.start,
+                   avg(trackpoints.watts) as mmp, count(trackpoints.watts) as samples 
+            from ${startsTemp}, trackpoints 
+            where ${startsTemp}.activity = trackpoints.activity and 
+                  trackpoints.timestamp >= ${startsTemp}.start and 
+                  trackpoints.timestamp <= ${startsTemp}.timestamp + ${period * 1000L} 
+            group by ${startsTemp}.activity, ${startsTemp}.timestamp
+            having samples > (0.85 * $period)""").registerAsTable(mmpsTemp)
+    
+    
   }
   
   def bestsWithoutTemporalOverlap(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
