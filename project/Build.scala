@@ -88,6 +88,16 @@ object SLPBuild  extends Build {
     }
   )
   
+  def useFixture = {
+    sys.env.get("SLP_FIXTURES_FROM") match {
+      case Some(dir: String) => s"""
+        |val data = app.processFiles(SLP.listFilesInDir("$dir"))
+        |data.registerAsTable("trackpoints")
+      """.stripMargin
+      case _ => ""
+    }
+  }
+  
   def analysisSettings = baseSettings ++ sparkSettings ++ breezeSettings ++ dispatchSettings ++ testSettings ++ Seq(
     initialCommands in console :=
       """
@@ -102,7 +112,9 @@ object SLPBuild  extends Build {
         |val sqlContext = new org.apache.spark.sql.SQLContext(sc)
         |val app = new SLP(sc)
         |import sqlContext._
-      """.stripMargin
+        |
+      """.stripMargin + useFixture,
+    cleanupCommands in console := "app.stop"
   )
   
   def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
