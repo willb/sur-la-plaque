@@ -146,7 +146,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
     val model = app.context.broadcast(clusterPoints(data, options.clusters, options.iterations))
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: Broadcast[KMeansModel]) = {
-      val windowedSamples = windowsForActivities(data, period, stripTrackpoints _).cache
+      val windowedSamples = windowsForActivities(data, period, stripTrackpoints _)
       val clusterPairs = windowedSamples
         .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)))}
       val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
