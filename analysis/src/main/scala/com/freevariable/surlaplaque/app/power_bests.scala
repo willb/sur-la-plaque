@@ -147,19 +147,19 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     val model = app.context.broadcast(clusterPoints(data, options.clusters, options.iterations))
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: Broadcast[KMeansModel]) = {
       val windowedSamples = windowsForActivities(data, period, stripTrackpoints _)
-      val clusterPairs = windowedSamples
-        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)))}
-      val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
 
-      val top20 = mmps.join(clusterPairs)
-       .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), (watts, (activity, offset)))}
-       .reduceByKey ((a, b) => if (a._1 > b._1) a else b)
-       .map {case ((headCluster, tailCluster), (watts, (activity, offset))) => (watts, (activity, offset))}
-       .sortByKey(false)
-       .take(20)
+      val bests = windowedSamples.map {
+        case ((activity, offset), samples)  => (
+          (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)),
+          ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)
+        )
+      }.cache
+
+      val top20 = bests.reduceByKey ((a, b) => if (a._2 > b._2) a else b)
+       .map { case ((_, _), keep) => keep }
+       .takeOrdered(20)(Ordering.by[((String, Int), Double), Double] { case ((_, _), watts) => -watts})
         
       app.context.parallelize(top20, app.context.defaultParallelism * 4)
-       .map {case (watts, (activity, offset)) => ((activity, offset), watts)} 
        .join (windowedSamples)
        .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
        .collect
