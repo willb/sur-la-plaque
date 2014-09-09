@@ -6,7 +6,7 @@ import com.mojolly.scalate.ScalatePlugin._
 import ScalateKeys._
 
 object SLPBuild  extends Build {
-  val SLP_VERSION = "0.0.2"
+  val SLP_VERSION = "0.0.3"
   
   lazy val analysis = project settings(analysisSettings : _*)
 
