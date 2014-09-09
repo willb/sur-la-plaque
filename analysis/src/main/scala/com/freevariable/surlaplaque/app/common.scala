@@ -22,6 +22,8 @@ package com.freevariable.surlaplaque.app;
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
+import scala.reflect.ClassTag
+
 object SLP {
     import java.io.File
     def listFilesInDir(dirname: String): List[String] = {
@@ -117,8 +119,22 @@ trait ActivitySliding {
   import com.freevariable.surlaplaque.data.Trackpoint
   
   def windowsForActivities[U](data: RDD[Trackpoint], period: Int, xform: (Trackpoint => U) = identity _) = {
+    applyWindowed(data, period, {case (activity, samples, offset) => ((activity, offset), samples.map(xform))})
+  }
+  
+  def applyWindowed[U: ClassTag](data: RDD[Trackpoint], period: Int, xform: ((String, Seq[Trackpoint], Int) => U)) = {
     val pairs = data.groupBy((tp:Trackpoint) => tp.activity.getOrElse("UNKNOWN"))
-    pairs.flatMap({case (activity:String, stp:Seq[Trackpoint]) => (stp sliding period).zipWithIndex.map {case (s,i) => ((activity, i), s.map(xform))}})
+    pairs.flatMap { 
+      case (activity: String, stp:Seq[Trackpoint]) =>
+        (stp sliding period).zipWithIndex.map { case (s, i) => xform(activity, s, i) }
+    }
+  }
+
+  def applyWindowedNoZip[U: ClassTag](data: RDD[Trackpoint], period: Int, xform: ((String, Seq[Trackpoint]) => U)) = {
+    val pairs = data.groupBy((tp:Trackpoint) => tp.activity.getOrElse("UNKNOWN"))
+    pairs.flatMap { 
+      case (activity: String, stp:Seq[Trackpoint]) => (stp sliding period).map { xform(activity, _) }
+    }
   }
   
   def identity(tp: Trackpoint) = tp
