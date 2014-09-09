@@ -141,29 +141,32 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   
   case class BasicTrackpoint(latlong: Coordinates, watts: Double) {}
   
+  case class Effort(mmp: Double, activity: String, startTimestamp: Long, endTimestamp: Long) {}
+  
   def stripTrackpoints(tp: Trackpoint) = BasicTrackpoint(tp.latlong, tp.watts)
   
   def bestsByEndpointClusters(options: PBOptions, data: RDD[Trackpoint], app: SLP) = {
     val model = app.context.broadcast(clusterPoints(data, options.clusters, options.iterations))
     def bestsForPeriod(data: RDD[Trackpoint], period: Int, app: SLP, model: Broadcast[KMeansModel]) = {
-      val windowedSamples = windowsForActivities(data, period, stripTrackpoints _)
-
-      val clusterPairs = windowedSamples
-        .map {case ((activity, offset), samples) => ((activity, offset), (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)))}
-      val mmps = windowedSamples.map {case ((activity, offset), samples) => ((activity, offset), samples.map(_.watts).reduce(_ + _) / samples.size)}
-
-      val top20 = mmps.join(clusterPairs)
-       .map {case ((activity, offset), (watts, (headCluster, tailCluster))) => ((headCluster, tailCluster), ((activity, offset), watts))}
-       .reduceByKey ((a, b) => if (a._2 > b._2) a else b)
+      val clusteredMMPs = applyWindowedNoZip(data, period, {
+          case (activity:String, samples:Seq[Trackpoint]) =>
+            (
+              (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)),
+              Effort(samples.map(_.watts).reduce(_ + _) / samples.size, activity, samples.head.timestamp, samples.last.timestamp)
+            )
+        }).cache
+      
+      val top20 = clusteredMMPs
+       .reduceByKey ((a, b) => if (a.mmp > b.mmp) a else b)
        .map { case ((_, _), keep) => keep }
-       .takeOrdered(20)(Ordering.by[((String, Int), Double), Double] { case ((_, _), watts) => -watts})
-        
-      app.context.parallelize(top20, app.context.defaultParallelism * 4)
-       .join (windowedSamples)
-       .map {case ((activity, offset), (watts, samples)) => (watts, samples)}
-       .collect
-        
+       .takeOrdered(20)(Ordering.by[Effort, Double] { case e:Effort => -e.mmp })
+       .map {
+         case e: Effort => (e.mmp, data.filter {case tp: Trackpoint => tp.activity == e.activity && tp.timestamp <= e.endTimestamp && tp.timestamp >= e.startTimestamp}.collect) 
+       }
+       top20
     }
+    
+    data.cache
     
     options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
       val bests = bestsForPeriod(data, period, app, model)
