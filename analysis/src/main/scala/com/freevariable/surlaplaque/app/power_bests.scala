@@ -161,7 +161,12 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
        .map { case ((_, _), keep) => keep }
        .takeOrdered(20)(Ordering.by[Effort, Double] { case e:Effort => -e.mmp })
        .map {
-         case e: Effort => (e.mmp, data.filter {case tp: Trackpoint => tp.activity == e.activity && tp.timestamp <= e.endTimestamp && tp.timestamp >= e.startTimestamp}.collect) 
+         case e: Effort => (
+           e.mmp, 
+           data.filter { 
+             case tp: Trackpoint => tp.activity.getOrElse("UNKNOWN") == e.activity && tp.timestamp <= e.endTimestamp && tp.timestamp >= e.startTimestamp
+           }.collect
+         ) 
        }
        top20
     }
