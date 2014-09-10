@@ -154,21 +154,19 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
               (closestCenter(samples.head.latlong, model.value), closestCenter(samples.last.latlong, model.value)),
               Effort(samples.map(_.watts).reduce(_ + _) / samples.size, activity, samples.head.timestamp, samples.last.timestamp)
             )
-        }).cache
+        })
       
-      val top20 = clusteredMMPs
+      clusteredMMPs
        .reduceByKey ((a, b) => if (a.mmp > b.mmp) a else b)
-       .map { case ((_, _), keep) => keep }
-       .takeOrdered(20)(Ordering.by[Effort, Double] { case e:Effort => -e.mmp })
+       .takeOrdered(20)(Ordering.by[((Int, Int), Effort), Double] { case (_, e:Effort) => -e.mmp })
        .map {
-         case e: Effort => (
+         case (_, e: Effort) => (
            e.mmp, 
            data.filter { 
              case tp: Trackpoint => tp.activity.getOrElse("UNKNOWN") == e.activity && tp.timestamp <= e.endTimestamp && tp.timestamp >= e.startTimestamp
            }.collect
          ) 
        }
-       top20
     }
     
     data.cache
