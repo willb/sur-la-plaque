@@ -26,6 +26,7 @@ object SLPBuild  extends Build {
         "com.github.nscala-time" %% "nscala-time" % "1.8.0",
         "io.spray" %%  "spray-json" % "1.3.3",
 	"com.typesafe.akka" %% "akka-actor" % "2.5.0",
+	"org.scala-lang.modules" %% "scala-xml" % "1.0.6",
 	"org.json4s" %% "json4s-jackson" % "3.2.10" % "provided"
     ),
     scalacOptions ++= Seq("-feature", "-Yrepl-sync", "-target:jvm-1.7", "-deprecation")

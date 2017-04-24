@@ -44,7 +44,9 @@ sealed case class Coordinates(lat: Double, lon: Double) extends Ordered[Coordina
     (this.lat, this.lon) compare (other.lat, other.lon)
 }
 
-sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String]) extends Ordered[Trackpoint] {
+sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Double, watts: Double, speed: Option[Double], distance: Option[Double], heartrate: Option[Double], cadence: Option[Double], activity: Option[String]
+
+) extends Ordered[Trackpoint] {
   import scala.math.Ordered.orderingToOrdered
   import Timestamp.{stringify => stringify_ts}
   
@@ -59,7 +61,8 @@ sealed case class Trackpoint(timestamp: Long, latlong: Coordinates, altitude: Do
     val run = distanceDelta(other) * 10 // run is in km, but we want to get a percentage grade
     rise/run
   }
-    
+  
+  // NB:  this ordering is meant to make convex hull calculation easier
   def compare(other: Trackpoint) = (this.latlong.lon, this.latlong.lat, this.timestamp, this.altitude, this.watts) compare (other.latlong.lon, other.latlong.lat, other.timestamp, other.altitude, other.watts)
 }
 
@@ -68,6 +71,6 @@ object Timestamp {
 }
 
 object Trackpoint {
-    def apply(ts_string: String, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String] = None) = 
-        new Trackpoint(ts_string.toDateTime.getMillis(), latlong, altitude, watts, activity)
+    def apply(ts_string: String, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String] = None, speed: Option[Double] = None, distance: Option[Double] = None, cadence: Option[Double] = None, heartrate: Option[Double] = None) = 
+        new Trackpoint(timestamp=ts_string.toDateTime.getMillis(), latlong=latlong, altitude=altitude, watts=watts, activity=activity, speed=speed, distance=distance, cadence=cadence, heartrate=heartrate)
 }

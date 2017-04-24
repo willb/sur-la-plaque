@@ -29,7 +29,7 @@ import org.json4s.jackson.JsonMethods._
 
 object extract {
     
-    def tupleFromTrackpoint(tp: scala.xml.Node, f: Option[String] = None) = Trackpoint(timestamp(tp), latlong(tp), alt(tp), watts(tp), f )
+    def tupleFromTrackpoint(tp: scala.xml.Node, f: Option[String] = None) = Trackpoint(timestamp(tp), latlong(tp), alt(tp), watts(tp), speed=speed(tp), cadence=cadence(tp), heartrate=heartrate(tp), distance=distance(tp), activity=f )
 
     def timestamp(tp: scala.xml.Node) = (tp \ "Time").text
 
@@ -45,10 +45,22 @@ object extract {
         case "" => 0.0
         case x: String => x.toDouble
     }
+
+    def speed(tp: scala.xml.Node) = optionalDouble("Speed")(tp)
+    def cadence(tp: scala.xml.Node) = optionalDouble("Cadence")(tp)
+    def heartrate(tp: scala.xml.Node) = optionalDouble("HeartRateBpm")(tp)
+    def distance(tp: scala.xml.Node) = optionalDouble("DistanceMeters")(tp)
     
+    private def optionalDouble(field: String) = {
+      def odhelper(tp: scala.xml.Node) = (tp \\ field).text match {
+	case "" => None
+	case x: String => Try(x.toDouble).toOption
+      }
+      odhelper _
+    }
+
     def trackpointDataFromFile(tcx: String) = {
         val tcxTree = XML.loadFile(tcx)
-        // (tcxTree \\ "Trackpoint").map(x => Try(extract.tupleFromTrackpoint(x, Some(tcx)))). {case Success(_) => true}.map (_.get)
         val (successes, failures) = (tcxTree \\ "Trackpoint").map(x => Try(extract.tupleFromTrackpoint(x, Some(tcx)))).partition(_.isSuccess)
         if (failures.size > 0) {
           Console.println("warning: encountered " + failures.size + s" failures processing file $tcx")
@@ -60,8 +72,8 @@ object extract {
 object TCX2CSV {
     def main(args: Array[String]) {
         for (file <- args.toList) 
-            for (tp @ Trackpoint(timestamp, Coordinates(lat, long), alt, watts, Some(file)) <- extract.trackpointDataFromFile(file))
-                Console.println("%s,%f,%f,%f,%f".format(tp.timestring, lat, long, alt, watts))
+          for (tp @ Trackpoint(timestamp, Coordinates(lat, lon), alt, watts, speed, distance, heartrate, cadence, Some(file)) <- extract.trackpointDataFromFile(file))
+                Console.println("%s,%f,%f,%f,%f".format(tp.timestring, lat, lon, alt, watts))
     }
 }
 
@@ -74,12 +86,12 @@ object TCX2Json {
        case Some(filename) => new PrintWriter(new File(filename))
        case None => new PrintWriter(new File("slp.json"))
    }
-   
+    
     def main(args: Array[String]) {
        val processedArgs = expandArgs(args)
        
        val tuples = processedArgs.toList.flatMap((file => 
-          for (tp @ Trackpoint(timestamp, Coordinates(lat, lon), alt, watts, Some(file)) <- extract.trackpointDataFromFile(file))
+          for (tp @ Trackpoint(timestamp, Coordinates(lat, lon), alt, watts, speed, distance, heartrate, cadence, Some(file)) <- extract.trackpointDataFromFile(file))
              yield ("timestamp" -> tp.timestring) ~ ("lat" -> lat) ~ ("lon" -> lon) ~ ("alt" -> alt) ~ ("watts" -> watts)
              )
              )
@@ -87,4 +99,27 @@ object TCX2Json {
        out.println(pretty(tuples))
        out.close
     }
+}
+
+object TCX2Parquet {
+  import java.io._
+  import com.freevariable.surlaplaque.app.SLP.expandArgs
+  import org.apache.spark.sql.SparkSession
+
+   def outputFile = sys.env.get("TCX2J_OUTPUT_FILE") match {
+       case Some(filename) => filename
+       case None => "slp.parquet"
+   }
+    
+    def main(args: Array[String]) {
+       val processedArgs = expandArgs(args)
+       val spark = SparkSession.builder.master("local[*]").getOrCreate()
+       import spark.implicits._
+
+       val tuples = spark.sparkContext.parallelize(processedArgs.toList).flatMap((file => 
+         extract.trackpointDataFromFile(file))).toDF()
+
+       tuples.write.parquet(outputFile)
+
+    }  
 }
