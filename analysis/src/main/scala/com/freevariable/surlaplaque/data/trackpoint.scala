@@ -69,5 +69,5 @@ object Timestamp {
 
 object Trackpoint {
     def apply(ts_string: String, latlong: Coordinates, altitude: Double, watts: Double, activity: Option[String] = None) = 
-        new Trackpoint(ts_string.toDateTime.millis, latlong, altitude, watts, activity)
+        new Trackpoint(ts_string.toDateTime.getMillis(), latlong, altitude, watts, activity)
 }

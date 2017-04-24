@@ -6,7 +6,7 @@ import com.mojolly.scalate.ScalatePlugin._
 import ScalateKeys._
 
 object SLPBuild  extends Build {
-  val SLP_VERSION = "0.0.3"
+  val SLP_VERSION = "0.1.0"
   
   lazy val analysis = project settings(analysisSettings : _*)
 
@@ -15,9 +15,7 @@ object SLPBuild  extends Build {
   def baseSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.freevariable.surlaplaque",
     version := SLP_VERSION,
-    scalaVersion := "2.10.4",
-//    ideaExcludeFolders += ".idea",
-//    ideaExcludeFolders += ".idea_modules",
+    scalaVersion := "2.11.8",
     resolvers ++= Seq(
       "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
       "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -25,11 +23,12 @@ object SLPBuild  extends Build {
       "spray" at "http://repo.spray.io/"
     ),
     libraryDependencies ++= Seq(
-        "com.github.nscala-time" %% "nscala-time" % "0.6.0",
-        "io.spray" %%  "spray-json" % "1.2.5",
-        "org.json4s" %%  "json4s-jackson" % "3.2.6"
+        "com.github.nscala-time" %% "nscala-time" % "1.8.0",
+        "io.spray" %%  "spray-json" % "1.3.3",
+	"com.typesafe.akka" %% "akka-actor" % "2.5.0",
+	"org.json4s" %% "json4s-jackson" % "3.2.10" % "provided"
     ),
-    scalacOptions ++= Seq("-feature", "-Yrepl-sync", "-target:jvm-1.7")
+    scalacOptions ++= Seq("-feature", "-Yrepl-sync", "-target:jvm-1.7", "-deprecation")
   )
   
   def sparkSettings = Seq(
@@ -62,14 +61,13 @@ object SLPBuild  extends Build {
   )
   
   def scalatraSettings = ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ Seq(
-    resolvers += "Scalate snapshots" at "https://repository.jboss.org/nexus/content/repositories/fs-snapshots/",
     libraryDependencies ++= Seq(
       "org.scalatra" %% "scalatra" % scalatraVersion,
       "org.scalatra" %% "scalatra-scalate" % scalatraVersion,
       "org.scalatra" %% "scalatra-specs2" % scalatraVersion % "test",
-      "org.fusesource.scalate" %% "scalate-core" % scalateVersion,
-      "org.fusesource.scalate" %% "scalate-project" % scalateVersion,
-      "org.fusesource.scalate" %% "scalate-util" % scalateVersion,
+      "org.scalatra.scalate" %% "scalate-core" % scalateVersion,
+      "org.scalatra.scalate" %% "scalate-project" % scalateVersion,
+      "org.scalatra.scalate" %% "scalate-util" % scalateVersion,
       "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
       "org.eclipse.jetty" % "jetty-webapp" % "8.1.8.v20121106" % "container",
       "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar"))
@@ -119,7 +117,7 @@ object SLPBuild  extends Build {
   
   def viewerSettings = baseSettings ++ scalatraSettings ++ testSettings
   
-  val sparkVersion = "1.1.0"
-  val scalatraVersion = "2.2.2"
-  val scalateVersion = "1.7.0-SNAPSHOT"
+  val sparkVersion = "2.1.0"
+  val scalatraVersion = "2.3.1"
+  val scalateVersion = "1.7.0"
 }

@@ -16,7 +16,7 @@ class SLPViewerServlet(system:ActorSystem, cache:ActorRef) extends SlpViewerStac
   protected implicit def executor: ExecutionContext = system.dispatcher
 
   import _root_.akka.pattern.ask
-  implicit val defaultTimeout = Timeout(10)
+  implicit val defaultTimeout = Timeout(Duration(10, SECONDS))
 
   get("/") {
     <html>

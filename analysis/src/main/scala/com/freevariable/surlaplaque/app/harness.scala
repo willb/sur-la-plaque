@@ -36,7 +36,7 @@ object ReplHarness extends Common {
     def mapActivities(args: Array[String]) = {
         val data = setup(args)
         
-        val apairs = data.map((tp:Trackpoint) => Pair(tp.activity.getOrElse("UNKNOWN"), Pair(tp.timestamp, tp)))
+        val apairs = data.map((tp:Trackpoint) => (tp.activity.getOrElse("UNKNOWN"), (tp.timestamp, tp)))
         
         val activities = apairs.keys.distinct.collect
         
@@ -44,7 +44,7 @@ object ReplHarness extends Common {
             val filtered = apairs.filter((tup) => {val (a,_) = tup ; a == activity});
             val timestampedTrackpoints = filtered.map((tup) => {val (_,(t,tp)) = tup; (t, tp.watts)}).sortByKey();
             val samples = timestampedTrackpoints.collect;
-            Pair(activity, samples)
+            (activity, samples)
         }
         
         pairs.toMap

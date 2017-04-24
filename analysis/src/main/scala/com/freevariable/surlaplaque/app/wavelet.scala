@@ -48,7 +48,7 @@ object WaveletClusterApp extends Common {
         
         val data = ReplHarness.setup(args, Some(app))
         
-        val apairs = data.map((tp:Trackpoint) => Pair(tp.activity.getOrElse("UNKNOWN"), Pair(tp.timestamp, tp)))
+        val apairs = data.map((tp:Trackpoint) => (tp.activity.getOrElse("UNKNOWN"), (tp.timestamp, tp)))
         
         val activities = apairs.keys.distinct.collect
         
@@ -57,7 +57,7 @@ object WaveletClusterApp extends Common {
             val filtered = apairs.filter((tup) => {val (a,_) = tup ; a == activity})
             val timestampedTrackpoints = filtered.map((tup) => {val (_,(t,tp)) = tup; (t, tp.watts)}).sortByKey()
             val samples = timestampedTrackpoints.collect
-            Pair(activity, samples.map((ttp) => ttp._2))
+            (activity, samples.map((ttp) => ttp._2))
         }
         
         app.context.parallelize(pairs)

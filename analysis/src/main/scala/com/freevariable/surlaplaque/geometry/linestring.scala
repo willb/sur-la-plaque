@@ -30,7 +30,7 @@ sealed case class LineString(points: Seq[Coordinates], properties: Map[String, S
   val length = points.length
   
   def annotate(k: AnnotationKey, v: AnnotationValue): LineString =
-    LineString(this.points, this.properties + Pair(k, v))
+    LineString(this.points, this.properties + Tuple2(k, v))
   
   def decimate(factor: Int) = {
     def dhelper(pts: List[Coordinates], count: Int): List[Coordinates] = 
