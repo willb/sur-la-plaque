@@ -112,14 +112,13 @@ object TCX2Parquet {
    }
     
     def main(args: Array[String]) {
-       val processedArgs = expandArgs(args)
-       val spark = SparkSession.builder.master("local[*]").getOrCreate()
-       import spark.implicits._
+      val processedArgs = expandArgs(args)
+      val spark = SparkSession.builder.master("local[*]").getOrCreate()
+      import spark.implicits._
+      
+      val tuples = spark.sparkContext.parallelize(processedArgs.toList).flatMap((file => extract.trackpointDataFromFile(file))).toDF()
 
-       val tuples = spark.sparkContext.parallelize(processedArgs.toList).flatMap((file => 
-         extract.trackpointDataFromFile(file))).toDF()
-
-       tuples.write.parquet(outputFile)
-
+      tuples.write.parquet(outputFile)
+      spark.stop
     }  
 }
