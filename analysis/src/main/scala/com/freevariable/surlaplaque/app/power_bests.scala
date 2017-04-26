@@ -43,15 +43,15 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
 
   import scala.collection.immutable.TreeSet
 
-  case class PBOptions(periodColors: Map[Int, Triple[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String, val httpEndpoint: Option[String]) {
+  case class PBOptions(periodColors: Map[Int, Tuple3[Short,Short,Short]], val clusters: Int, val iterations: Int, val files: List[String], val defaultOpacity: Short, val outputFile: String, val httpEndpoint: Option[String]) {
     def periodMap = {
       if (periodColors.size == 0) 
-        Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> Triple[Short,Short,Short](255,0,0))
+        Map(getEnvValue("SLP_MMP_PERIOD", "60").toInt -> (255,0,0))
       else 
         periodColors
     }
     
-    def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) = this.copy(periodColors = this.periodColors + Pair(period, Triple[Short,Short,Short](r,g,b)))
+    def withPeriodColoring(period: Int, r: Short, g: Short, b: Short) = this.copy(periodColors = this.periodColors + ((period, (r,g,b))))
     
     def withClusters(clusters: Int) = this.copy(clusters = clusters)
 
@@ -136,8 +136,8 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
   
   import Math.abs
   
-  type AO = Pair[String, Int]
-  type AOWatts = Pair[AO, Double]
+  type AO = Tuple2[String, Int]
+  type AOWatts = Tuple2[AO, Double]
   
   case class BasicTrackpoint(latlong: Coordinates, watts: Double) {}
   
@@ -171,7 +171,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
     
     data.cache
     
-    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+    options.periodMap.flatMap { case(period: Int, color: Tuple3[Short,Short,Short]) =>
       val bests = bestsForPeriod(data, period, app, model)
       val best = bests.head._1
       bests.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("stroke" -> rgba(color._1, color._2, color._3, (options.defaultOpacity * (watts / best)).toShort), "stroke-width" -> "7", "label" -> s"$watts watts"))}
@@ -200,9 +200,9 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
       } else {
         cs match {
           case Nil => kept
-          case first @ Pair(Pair(activity, offset), watts) :: rest => 
+          case first @ ((activity, offset), watts) :: rest => 
             if (activityPeriods.filter({case (a,o) => a == activity && abs(o - offset) < period}).size == 0) {
-              thelper(activityPeriods + Pair(activity, offset), Pair(Pair(activity, offset), watts)::kept, rest)
+              thelper(activityPeriods + ((activity, offset)), (((activity, offset), watts))::kept, rest)
             } else {
               thelper(activityPeriods, kept, rest)
             }
@@ -213,7 +213,7 @@ object PowerBestsApp extends Common with ActivitySliding with PointClustering {
       thelper(TreeSet[AO](), List[AOWatts](), candidates).reverse
     }
     
-    options.periodMap.flatMap { case(period: Int, color: Triple[Short,Short,Short]) =>
+    options.periodMap.flatMap { case(period: Int, color: Tuple3[Short,Short,Short]) =>
       bestsForPeriod(data, period, app).collect.map {case (watts, samples) => LineString(samples.map(_.latlong), Map("color" -> rgba(color._1, color._2, color._3, 128), "label" -> s"$watts watts"))}
     }
   }
